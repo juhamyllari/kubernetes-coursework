@@ -15,4 +15,4 @@ spec:
     spec:
       containers:
       - name: log-output
-        image: juhamyllari/todo-app:v5
+        image: juhamyllari/todo-app:v1.5.0
