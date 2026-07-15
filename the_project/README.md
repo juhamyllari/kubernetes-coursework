@@ -13,3 +13,12 @@ The exercise 1.4 version of the app is deployed using the `deployment.yaml` mani
 ```bash
 kubectl apply -f manifests/deployment.yaml
 ```
+
+## Deployment (exercise 1.6)
+The exercise 1.6 version of the app is deployed using the `deployment.yaml` manifest file and the `service.yaml` manifest file. Port forwarding is used to access the app from the local machine. 
+
+```bash
+kubectl port-forward service/todo-svc 30080:80 &
+kubectl apply -f manifests/deployment.yaml
+kubectl apply -f manifests/service.yaml
+```

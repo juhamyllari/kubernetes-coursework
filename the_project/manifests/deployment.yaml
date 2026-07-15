@@ -1,7 +1,7 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: todo-app
+  name: todo-dep
   namespace: default
 spec:
   replicas: 1
@@ -14,5 +14,5 @@ spec:
         app: todo-app
     spec:
       containers:
-      - name: log-output
-        image: juhamyllari/todo-app:v1.5.0
+      - name: todo-app
+        image: juhamyllari/todo-app:v1.6.0
