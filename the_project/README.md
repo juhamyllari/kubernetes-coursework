@@ -22,3 +22,10 @@ kubectl port-forward service/todo-svc 30080:80 &
 kubectl apply -f manifests/deployment.yaml
 kubectl apply -f manifests/service.yaml
 ```
+
+## Deployment (exercise 1.8)
+The exercise 1.8 version of the app is deployed by applying the manifest directory:
+
+```bash
+kubectl apply -f manifests/
+```

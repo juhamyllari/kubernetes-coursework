@@ -15,4 +15,4 @@ spec:
     spec:
       containers:
       - name: todo-app
-        image: juhamyllari/todo-app:v1.6.0
+        image: juhamyllari/todo-app:v1.8.0
