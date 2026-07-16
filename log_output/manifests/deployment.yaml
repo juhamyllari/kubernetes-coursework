@@ -1,18 +1,18 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: log-output
+  name: logger-deployment
   namespace: default
 spec:
   replicas: 1
   selector:
     matchLabels:
-      app: log-output
+      app: logger
   template:
     metadata:
       labels:
-        app: log-output
+        app: logger
     spec:
       containers:
-      - name: log-output
-        image: juhamyllari/timestamp-app:v4
+      - name: logger
+        image: juhamyllari/logger:v1.7.1
