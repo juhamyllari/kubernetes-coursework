@@ -20,3 +20,10 @@ Deploy by applying the manifest directory `log_output/manifests`:
 ```bash
 kubectl apply -f log_output/manifests
 ```
+
+## Deployment (exercise 1.9)
+Deploy the pingpong and logger apps by applying the manifest directory `log_output/manifests`:
+
+```bash
+kubectl apply -f log_output/manifests
+```
