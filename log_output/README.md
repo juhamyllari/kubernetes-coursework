@@ -13,3 +13,10 @@ Deploy using the manifest file `log_output/deployment.yaml`:
 ```bash
 kubectl apply -f log_output/deployment.yaml
 ```
+
+## Deployment (exercise 1.7)
+Deploy by applying the manifest directory `log_output/manifests`:
+
+```bash
+kubectl apply -f log_output/manifests
+```
