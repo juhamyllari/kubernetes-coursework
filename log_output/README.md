@@ -14,15 +14,8 @@ Deploy using the manifest file `log_output/deployment.yaml`:
 kubectl apply -f log_output/deployment.yaml
 ```
 
-## Deployment (exercise 1.7)
+## Deployment (exercises 1.7, 1.9, 1.10)
 Deploy by applying the manifest directory `log_output/manifests`:
-
-```bash
-kubectl apply -f log_output/manifests
-```
-
-## Deployment (exercise 1.9)
-Deploy the pingpong and logger apps by applying the manifest directory `log_output/manifests`:
 
 ```bash
 kubectl apply -f log_output/manifests

@@ -1,37 +1,28 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: logger-deployment
-  namespace: default
+  name: log-output
 spec:
   replicas: 1
   selector:
     matchLabels:
-      app: logger
+      app: log-output
   template:
     metadata:
       labels:
-        app: logger
+        app: log-output
     spec:
       containers:
-      - name: logger
-        image: juhamyllari/logger:v1.7.1
----
-apiVersion: apps/v1
-kind: Deployment
-metadata:
-  name: pingpong-deployment
-  namespace: default
-spec:
-  replicas: 1
-  selector:
-    matchLabels:
-      app: pingpong-app
-  template:
-    metadata:
-      labels:
-        app: pingpong-app
-    spec:
-      containers:
-      - name: pingpong
-        image: juhamyllari/pingpong:v1.9.0
+        - name: file-logger
+          image: juhamyllari/file-logger:v1.10.0
+          volumeMounts:
+            - name: shared-logs
+              mountPath: /data
+        - name: log-reader
+          image: juhamyllari/log-reader:v1.10.0
+          volumeMounts:
+            - name: shared-logs
+              mountPath: /data
+      volumes:
+        - name: shared-logs
+          emptyDir: {}
