@@ -1,28 +1,51 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: log-output
+  name: stamppong-deployment
+  namespace: default
 spec:
   replicas: 1
   selector:
     matchLabels:
-      app: log-output
+      app: stamppong
   template:
     metadata:
       labels:
-        app: log-output
+        app: stamppong
     spec:
       containers:
-        - name: file-logger
-          image: juhamyllari/file-logger:v1.10.0
-          volumeMounts:
-            - name: shared-logs
-              mountPath: /data
-        - name: log-reader
-          image: juhamyllari/log-reader:v1.10.0
-          volumeMounts:
-            - name: shared-logs
-              mountPath: /data
+      - name: stamppong
+        image: juhamyllari/stamppong:v1.11.0
+        volumeMounts:
+        - name: data-volume
+          mountPath: /data
       volumes:
-        - name: shared-logs
-          emptyDir: {}
+      - name: data-volume
+        persistentVolumeClaim:
+          claimName: local-pvc
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: pingpong-deployment
+  namespace: default
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: pingpong
+  template:
+    metadata:
+      labels:
+        app: pingpong
+    spec:
+      containers:
+      - name: pingpong
+        image: juhamyllari/pingpong:v1.11.1
+        volumeMounts:
+        - name: data-volume
+          mountPath: /data
+      volumes:
+      - name: data-volume
+        persistentVolumeClaim:
+          claimName: local-pvc

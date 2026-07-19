@@ -1,0 +1,28 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: log-output
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: log-output
+  template:
+    metadata:
+      labels:
+        app: log-output
+    spec:
+      containers:
+        - name: file-logger
+          image: juhamyllari/file-logger:v1.10.0
+          volumeMounts:
+            - name: shared-logs
+              mountPath: /data
+        - name: log-reader
+          image: juhamyllari/log-reader:v1.10.0
+          volumeMounts:
+            - name: shared-logs
+              mountPath: /data
+      volumes:
+        - name: shared-logs
+          emptyDir: {}
