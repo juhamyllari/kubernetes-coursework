@@ -15,7 +15,7 @@ spec:
     spec:
       containers:
       - name: todo-app
-        image: juhamyllari/todo-app:v1.12.5
+        image: juhamyllari/todo-app:v1.13.1
         volumeMounts:
         - name: data-volume
           mountPath: /data

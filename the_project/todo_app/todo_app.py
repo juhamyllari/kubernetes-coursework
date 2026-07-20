@@ -1,6 +1,6 @@
 import json
-from fastapi import FastAPI, Request, Response
-from fastapi.responses import HTMLResponse
+from fastapi import FastAPI, Form, Request, Response
+from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
 import requests
 import os
@@ -9,10 +9,11 @@ import time
 
 app = FastAPI()
 templates = Jinja2Templates(directory="templates")
+todos = ["Learn Kubernetes", "Build a great FastAPI app", "Deploy to k3s"]
 
 STORAGE_DIR = os.environ.get("STORAGE_DIR", "/data")
 IMAGE_PATH = os.path.join(STORAGE_DIR, "cached_image.jpg")
-IMAGE_SOURCE_URL = "https://picsum.photos/800/600"
+IMAGE_SOURCE_URL = "https://picsum.photos/600/450"
 IMAGE_MAX_AGE = 600  # In seconds
 
 print("Storage directory: " + STORAGE_DIR, flush=True)
@@ -49,7 +50,17 @@ def read_root(request: Request):
 		fetch_new_image()
 	else:
 		print(f"Cached image age {image_age:.2f}s is within max age {IMAGE_MAX_AGE:.2f}s. Using cached image.", flush=True)
-	return templates.TemplateResponse(request, "index.html")
+	return templates.TemplateResponse(request, "index.html", context={"todos": todos})
+
+@app.post("/todo")
+async def add_todo(task: str = Form(...)):
+    # 1. Process the data sent from the <input name="task" />
+    todos.append(task)
+    print(f"Current Todos: {todos}")
+    
+    # 2. Redirect back to the main page so the browser refreshes 
+    # and doesn't get stuck on a blank /todo page.
+    return RedirectResponse(url="/", status_code=303)
 
 if __name__ == "__main__":
 	port = int(os.environ.get("PORT", 3000))

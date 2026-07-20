@@ -8,9 +8,47 @@
 		<style>
 			body { font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial; margin:0; display:flex; flex-direction:column; min-height:100vh; }
 			header { background:#f5f5f5; padding:20px 16px; text-align:center; font-size:1.5rem; font-weight:600; }
-			main { flex:1; display:flex; align-items:center; justify-content:center; padding:24px; }
-			.image-placeholder { width:800px; height:600px; background:#e9e9e9; border:2px dashed #ccc; display:flex; align-items:center; justify-content:center; color:#666; }
+			main { flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center; padding:24px; gap:24px; }
+			.image-placeholder { width: 400px; height:300; background:#e9e9e9; border:2px dashed #ccc; display:flex; align-items:center; justify-content:center; color:#666; }
 			footer { text-align:center; padding:12px 8px; background:#fafafa; color:#333; }
+			/* Container for the todo boxes */
+			.todo-list {
+				list-style: none;
+				padding: 0;
+				margin: 0;
+				width: 100%;
+				max-width: 400px;
+				display: flex;
+				flex-direction: column;
+				gap: 6px; /* Space between each todo box */
+			}
+
+			/* Individual todo box styling */
+			.todo-item {
+				display: block;
+				width: 100%;
+				padding: 14px 18px;
+				background-color: #f0f4f8; /* Soft, light blue/grey tint */
+				border: 1px solid #dce3eb;
+				border-radius: 8px;
+				color: #2c3e50;
+				text-align: left;
+				font-weight: 500;
+				text-decoration: none;
+				transition: background-color 0.2s ease, transform 0.1s ease;
+				cursor: pointer;
+				margin-bottom: 2px; /* Space between each todo box */
+			}
+
+			/* Hover and active states for when they become clickable */
+			.todo-item:hover {
+				background-color: #e2eaf2;
+				border-color: #cbd5e1;
+			}
+
+			.todo-item:active {
+				transform: scale(0.99);
+			}
 		</style>
 	</head>
 	<body>
@@ -19,6 +57,23 @@
 		<main>
 			<!-- The image is served from the /image endpoint -->
 			<img src="/image" alt="Cached Image" class="image-placeholder">
+			<!-- Input field (max 140 characters) for entering new todo items -->
+			<form method="post" action="/todo">
+				<input type="text" name="task" placeholder="Enter a new todo item..." maxlength="140" />
+				<button type="submit">Add Todo</button>
+			</form>
+			<!-- Display the list of todos -->
+			<div class="todo-list">
+				{% if todos %}
+					{% for todo in todos %}
+						<button type="button" class="todo-item">
+							{{ todo }}
+						</button>
+					{% endfor %}
+				{% else %}
+					<p style="text-align: center; color: #666; margin: 0;">No tasks yet.</p>
+				{% endif %}
+			</div>
 		</main>
 
 		<footer>DevOps with Kubernetes 2026</footer>
