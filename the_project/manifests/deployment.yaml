@@ -15,4 +15,11 @@ spec:
     spec:
       containers:
       - name: todo-app
-        image: juhamyllari/todo-app:v1.8.0
+        image: juhamyllari/todo-app:v1.12.5
+        volumeMounts:
+        - name: data-volume
+          mountPath: /data
+      volumes:
+      - name: data-volume
+        persistentVolumeClaim:
+          claimName: local-pvc
