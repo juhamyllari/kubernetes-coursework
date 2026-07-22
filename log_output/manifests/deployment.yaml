@@ -15,14 +15,10 @@ spec:
     spec:
       containers:
       - name: stamppong
-        image: juhamyllari/stamppong:v1.11.0
-        volumeMounts:
-        - name: data-volume
-          mountPath: /data
-      volumes:
-      - name: data-volume
-        persistentVolumeClaim:
-          claimName: local-pvc
+        image: juhamyllari/stamppong:v2.1.7
+        env:
+          - name: COUNTER_SERVICE_URL
+            value: "http://pingpong-svc:2345/pings"
 ---
 apiVersion: apps/v1
 kind: Deployment
@@ -41,11 +37,4 @@ spec:
     spec:
       containers:
       - name: pingpong
-        image: juhamyllari/pingpong:v1.11.1
-        volumeMounts:
-        - name: data-volume
-          mountPath: /data
-      volumes:
-      - name: data-volume
-        persistentVolumeClaim:
-          claimName: local-pvc
+        image: juhamyllari/pingpong:v2.1.1

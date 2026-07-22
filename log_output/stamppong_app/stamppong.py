@@ -1,49 +1,49 @@
-
-import http.server
-import socketserver
+import os
 import uuid
-from datetime import datetime
-from pathlib import Path
+from datetime import datetime, timezone
+import httpx
+from fastapi import FastAPI, Response, status
+
+app = FastAPI()
+
+# Server UUID generated once at module startup
+SERVER_UUID = str(uuid.uuid4())
+
+# Read environment variable at startup
+COUNTER_SERVICE_URL = os.environ.get(
+    "COUNTER_SERVICE_URL", 
+    "http://pingpong-svc:2345/pings"
+)
+
+if "COUNTER_SERVICE_URL" in os.environ:
+    print(f"COUNTER_SERVICE_URL is set to: {COUNTER_SERVICE_URL}")
+else:
+    print(f"COUNTER_SERVICE_URL is not set, using default: {COUNTER_SERVICE_URL}")
 
 
-COUNTER_FILE = Path('/data/pingpong_counter.txt')
+async def get_pong_count() -> int:
+    """Fetch the current counter value asynchronously from the pingpong service."""
+    try:
+        async with httpx.AsyncClient(timeout=3.0) as client:
+            response = await client.get(COUNTER_SERVICE_URL)
+            response.raise_for_status()
+            data = response.json()
+            return data.get("counter", 0)
+    except Exception as e:
+        print(f"Error fetching pong count: {e}")
+        return -1
 
 
-class Handler(http.server.BaseHTTPRequestHandler):
-	server_uuid = str(uuid.uuid4())
+@app.get("/", response_class=Response)
+async def read_root():
+    pong_count = await get_pong_count()
+    timestamp = datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
+    body = f"{timestamp}: {SERVER_UUID}.\nPing / Pongs: {pong_count}\n"
 
-	def do_GET(self):
-		if self.path != '/':
-			self.send_error(404)
-			return
-
-		# read pong count
-		try:
-			text = COUNTER_FILE.read_text(encoding='utf-8').strip()
-			pong_count = int(text) if text else 0
-		except Exception:
-			pong_count = 0
-
-		timestamp = datetime.utcnow().isoformat() + 'Z'
-		body = f"{timestamp}: {self.server_uuid}.\nPing / Pongs: {pong_count}\n"
-
-		body_bytes = body.encode('utf-8')
-		self.send_response(200)
-		self.send_header('Content-Type', 'text/plain; charset=utf-8')
-		self.send_header('Content-Length', str(len(body_bytes)))
-		self.end_headers()
-		self.wfile.write(body_bytes)
+    return Response(content=body, media_type="text/plain; charset=utf-8")
 
 
-def run(port=8000):
-	with socketserver.TCPServer(('', port), Handler) as httpd:
-		print(f'Serving on port {port}, UUID: {Handler.server_uuid}')
-		try:
-			httpd.serve_forever()
-		except KeyboardInterrupt:
-			pass
+if __name__ == "__main__":
+    import uvicorn
 
-
-if __name__ == '__main__':
-	run()
-
+    uvicorn.run(app, host="0.0.0.0", port=8000)
