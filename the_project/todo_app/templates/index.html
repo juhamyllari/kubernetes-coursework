@@ -1,81 +1,117 @@
-<!doctype html>
+<!DOCTYPE html>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@picocss/pico@2/css/pico.min.css" />
 <html lang="en">
-	<head>
-		<meta charset="utf-8">
-		<meta name="viewport" content="width=device-width, initial-scale=1">
-		<title>Todo App</title>
-		<style>
-			body { font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial; margin:0; display:flex; flex-direction:column; min-height:100vh; }
-			header { background:#f5f5f5; padding:20px 16px; text-align:center; font-size:1.5rem; font-weight:600; }
-			main { flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center; padding:24px; gap:24px; }
-			.image-placeholder { width: 400px; height:300; background:#e9e9e9; border:2px dashed #ccc; display:flex; align-items:center; justify-content:center; color:#666; }
-			footer { text-align:center; padding:12px 8px; background:#fafafa; color:#333; }
-			/* Container for the todo boxes */
-			.todo-list {
-				list-style: none;
-				padding: 0;
-				margin: 0;
-				width: 100%;
-				max-width: 400px;
-				display: flex;
-				flex-direction: column;
-				gap: 6px; /* Space between each todo box */
-			}
+<head>
+  <meta charset="UTF-8">
+  <title>k3d Todo App</title>
+  <style>
+    body { font-family: system-ui, sans-serif; max-width: 500px; margin: 2rem auto; padding: 0 1rem; }
+    .image-container { margin-bottom: 1.5rem; }
+    img { max-width: 100%; border-radius: 8px; }
 
-			/* Individual todo box styling */
-			.todo-item {
-				display: block;
-				width: 100%;
-				padding: 14px 18px;
-				background-color: #f0f4f8; /* Soft, light blue/grey tint */
-				border: 1px solid #dce3eb;
-				border-radius: 8px;
-				color: #2c3e50;
-				text-align: left;
-				font-weight: 500;
-				text-decoration: none;
-				transition: background-color 0.2s ease, transform 0.1s ease;
-				cursor: pointer;
-				margin-bottom: 2px; /* Space between each todo box */
-			}
+    /* Custom styles for button-like todo items */
+    #todo-list {
+      list-style: none;
+      padding-left: 0;
+      margin-top: 1rem;
+    }
 
-			/* Hover and active states for when they become clickable */
-			.todo-item:hover {
-				background-color: #e2eaf2;
-				border-color: #cbd5e1;
-			}
+    #todo-list li[role="button"] {
+      /* Force Pico's button contrast color to normal body text */
+      --pico-color: var(--pico-contrast, #111827);
+      color: var(--pico-color) !important;
+      
+      background-color: var(--pico-card-background-color, #f8f9fa);
+      border: 1px solid var(--pico-border-color, #e9ecef);
+      border-radius: 8px;
+      padding: 0.85rem 1.2rem;
+      margin-bottom: 0.75rem;
+      cursor: pointer;
+      transition: transform 0.15s ease, box-shadow 0.15s ease, border-color 0.15s ease;
+      word-break: break-word;
+      display: flex;
+      align-items: center;
+      user-select: none;
+    }
 
-			.todo-item:active {
-				transform: scale(0.99);
-			}
-		</style>
-	</head>
-	<body>
-		<header>Todo App</header>
+    /* Hover & Focus state */
+    #todo-list li[role="button"]:hover {
+      transform: translateY(-2px);
+      border-color: var(--pico-primary, #0172ad);
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+      background-color: var(--pico-card-background-color, #f8f9fa);
+    }
 
-		<main>
-			<!-- The image is served from the /image endpoint -->
-			<img src="/image" alt="Cached Image" class="image-placeholder">
-			<!-- Input field (max 140 characters) for entering new todo items -->
-			<form method="post" action="/todo">
-				<input type="text" name="task" placeholder="Enter a new todo item..." maxlength="140" />
-				<button type="submit">Add Todo</button>
-			</form>
-			<!-- Display the list of todos -->
-			<div class="todo-list">
-				{% if todos %}
-					{% for todo in todos %}
-						<button type="button" class="todo-item">
-							{{ todo }}
-						</button>
-					{% endfor %}
-				{% else %}
-					<p style="text-align: center; color: #666; margin: 0;">No tasks yet.</p>
-				{% endif %}
-			</div>
-		</main>
+    #todo-list li[role="button"]:active {
+      transform: translateY(0);
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+    }
+  </style>
+</head>
+<body>
 
-		<footer>DevOps with Kubernetes 2026</footer>
-	</body>
+  <h1>Daily Todo</h1>
+
+  <!-- Cached image served by the Frontend -->
+  <div class="image-container">
+    <img src="/image" alt="Daily Random Image" />
+  </div>
+
+  <!-- Form to add todos dynamically -->
+  <form id="todo-form">
+    <input type="text" id="todo-input" placeholder="New todo item..." maxlength="140" required />
+    <button type="submit">Add Todo</button>
+  </form>
+
+  <h2>Your Todos</h2>
+  <ul id="todo-list"></ul>
+
+  <script>
+    const todoList = document.getElementById('todo-list');
+    const todoForm = document.getElementById('todo-form');
+    const todoInput = document.getElementById('todo-input');
+
+    // Fetch todos from the backend API on load
+    async function loadTodos() {
+      try {
+        const res = await fetch('/api/todos');
+        const todos = await res.json();
+        todoList.innerHTML = '';
+        todos.forEach(todo => {
+          const li = document.createElement('li');
+          li.setAttribute('role', 'button');
+          li.setAttribute('tabindex', '0');
+          li.textContent = todo;
+          todoList.appendChild(li);
+        });
+      } catch (err) {
+        console.error("Failed to load todos:", err);
+      }
+    }
+
+    // Submit a new todo via PUT request
+    todoForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const task = todoInput.value.trim();
+      if (!task) return;
+
+      try {
+        const res = await fetch('/api/todos', {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(task)
+        });
+
+        if (res.ok) {
+          todoInput.value = '';
+          loadTodos(); // Refresh list
+        }
+      } catch (err) {
+        console.error("Failed to add todo:", err);
+      }
+    });
+
+    loadTodos();
+  </script>
+</body>
 </html>

@@ -15,7 +15,7 @@ spec:
     spec:
       containers:
       - name: todo-app
-        image: juhamyllari/todo-app:v1.13.1
+        image: juhamyllari/todo-app:v2.2.5
         volumeMounts:
         - name: data-volume
           mountPath: /data
@@ -23,3 +23,22 @@ spec:
       - name: data-volume
         persistentVolumeClaim:
           claimName: local-pvc
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: todo-backend-dep
+  namespace: default
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: todo-backend
+  template:
+    metadata:
+      labels:
+        app: todo-backend
+    spec:
+      containers:
+      - name: todo-backend
+        image: juhamyllari/todo-backend:v2.2.1
