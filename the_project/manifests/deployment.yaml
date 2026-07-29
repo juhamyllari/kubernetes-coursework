@@ -15,7 +15,38 @@ spec:
     spec:
       containers:
       - name: todo-app
-        image: juhamyllari/todo-app:v2.2.5
+        image: juhamyllari/todo-app:v2.6.1
+        env:
+          - name: BACKEND_PORT
+            valueFrom:
+              configMapKeyRef:
+                name: log-configmap
+                key: BACKEND_PORT
+          - name: FRONTEND_PORT
+            valueFrom:
+              configMapKeyRef:
+                name: log-configmap
+                key: FRONTEND_PORT
+          - name: STORAGE_DIR
+            valueFrom:
+              configMapKeyRef:
+                name: log-configmap
+                key: STORAGE_DIR
+          - name: IMAGE_FILENAME
+            valueFrom:
+              configMapKeyRef:
+                name: log-configmap
+                key: IMAGE_FILENAME
+          - name: IMAGE_SOURCE_URL
+            valueFrom:
+              configMapKeyRef:
+                name: log-configmap
+                key: IMAGE_SOURCE_URL
+          - name: IMAGE_MAX_AGE
+            valueFrom:
+              configMapKeyRef:
+                name: log-configmap
+                key: IMAGE_MAX_AGE
         volumeMounts:
         - name: data-volume
           mountPath: /data
@@ -41,4 +72,10 @@ spec:
     spec:
       containers:
       - name: todo-backend
-        image: juhamyllari/todo-backend:v2.2.1
+        image: juhamyllari/todo-backend:v2.6.1
+        env:
+          - name: BACKEND_PORT
+            valueFrom:
+              configMapKeyRef:
+                name: log-configmap
+                key: BACKEND_PORT

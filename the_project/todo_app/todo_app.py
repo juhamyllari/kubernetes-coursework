@@ -6,13 +6,16 @@ from fastapi.templating import Jinja2Templates
 import requests
 import uvicorn
 
+# Exercise 2.6 is about replacing hardcoded values with environment variables.
+FRONTEND_PORT = int(os.environ.get("FRONTEND_PORT"))
+STORAGE_DIR = os.environ.get("STORAGE_DIR")
+IMAGE_FILENAME = os.environ.get("IMAGE_FILENAME")
+IMAGE_PATH = os.path.join(STORAGE_DIR, IMAGE_FILENAME)
+IMAGE_SOURCE_URL = os.environ.get("IMAGE_SOURCE_URL")
+IMAGE_MAX_AGE = int(os.environ.get("IMAGE_MAX_AGE"))  # in seconds
+
 app = FastAPI()
 templates = Jinja2Templates(directory="templates")
-
-STORAGE_DIR = os.environ.get("STORAGE_DIR", "/data")
-IMAGE_PATH = os.path.join(STORAGE_DIR, "cached_image.jpg")
-IMAGE_SOURCE_URL = "https://picsum.photos/600/450"
-IMAGE_MAX_AGE = 600
 
 def get_image_age():
     if os.path.exists(IMAGE_PATH):
@@ -39,6 +42,6 @@ def read_root(request: Request):
     return templates.TemplateResponse(request, "index.html")
 
 if __name__ == "__main__":
-	port = 3000
+	port = FRONTEND_PORT
 	print("Server started in port " + str(port), flush=True)
 	uvicorn.run("todo_app:app", host="0.0.0.0", port=port, reload=True)
