@@ -1,27 +1,61 @@
 import os
-from fastapi import FastAPI, Body, status
-from pydantic import constr
-import uvicorn
+from contextlib import asynccontextmanager
+from fastapi import FastAPI, HTTPException, status
+from pydantic import BaseModel, StringConstraints
+from typing import Annotated
+from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession, async_sessionmaker
+from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
+from sqlalchemy import select
 
-app = FastAPI()
+DB_USER = os.environ.get("POSTGRES_USER")
+DB_PASSWORD = os.environ.get("POSTGRES_PASSWORD")
+DB_HOST = os.environ.get("POSTGRES_HOST")
+DB_PORT = os.environ.get("POSTGRES_PORT")
+DB_NAME = os.environ.get("POSTGRES_DB")
 
-todos: list[str] = ["Learn k3d", "????", "Profit!"]
+DATABASE_URL = f"postgresql+asyncpg://{DB_USER}:{DB_PASSWORD}@{DB_HOST}:{DB_PORT}/{DB_NAME}"
 
-# The port has no fallback as we want it to fail in Exercise 2.6
-# if the environment variable is not set. 
-BACKEND_PORT = int(os.environ.get("BACKEND_PORT"))
+engine = create_async_engine(DATABASE_URL, echo=True)
+AsyncSessionLocal = async_sessionmaker(engine, class_=AsyncSession, expire_on_commit=False)
 
-@app.get("/api/todos")
-def get_todos() -> list[str]:
-    return todos
+class Base(DeclarativeBase):
+    pass
 
+class TodoItem(Base):
+    __tablename__ = "todos"
+    id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
+    text: Mapped[str] = mapped_column(nullable=False)
 
-@app.put("/api/todos", status_code=status.HTTP_201_CREATED)
-def create_todo(todo: constr(max_length=140) = Body(...)) -> str:
-    todos.append(todo)
-    return todo
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    async with engine.begin() as conn:
+        await conn.run_sync(Base.metadata.create_all)
+    yield
+
+app = FastAPI(lifespan=lifespan)
+
+# Pydantic schema for validation
+TodoText = Annotated[str, StringConstraints(max_length=140)]
+
+class TodoCreate(BaseModel):
+    text: TodoText
+
+@app.get("/api/todos", response_model=list[str])
+async def get_todos():
+    async with AsyncSessionLocal() as session:
+        result = await session.execute(select(TodoItem.text))
+        return list(result.scalars().all())
+
+@app.put("/api/todos", status_code=status.HTTP_201_CREATED, response_model=str)
+async def create_todo(payload: TodoCreate):
+    async with AsyncSessionLocal() as session:
+        new_todo = TodoItem(text=payload.text)
+        session.add(new_todo)
+        await session.commit()
+        return new_todo.text
 
 if __name__ == "__main__":
-	port = BACKEND_PORT
-	print("Server started in port " + str(port), flush=True)
-	uvicorn.run("todo_backend:app", host="0.0.0.0", port=port, reload=True)
+    BACKEND_PORT = int(os.environ["BACKEND_PORT"])
+    import uvicorn
+    uvicorn.run("todo_backend:app", host="0.0.0.0", port=BACKEND_PORT, reload=True)
+    

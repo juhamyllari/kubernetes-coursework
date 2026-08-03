@@ -50,7 +50,7 @@
 </head>
 <body>
 
-  <h1>Daily Todo</h1>
+  <h1>Todo App</h1>
 
   <!-- Cached image served by the Frontend -->
   <div class="image-container">
@@ -99,7 +99,7 @@
         const res = await fetch('/api/todos', {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(task)
+          body: JSON.stringify({ text: task }) // <--- FIX: Wrap task in an object
         });
 
         if (res.ok) {
