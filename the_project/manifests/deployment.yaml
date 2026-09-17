@@ -15,7 +15,7 @@ spec:
     spec:
       containers:
       - name: todo-app
-        image: juhamyllari/todo-app:v2.8.1
+        image: juhamyllari/todo-app:v2.9.0
         env:
           - name: BACKEND_PORT
             valueFrom:

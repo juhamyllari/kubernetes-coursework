@@ -30,7 +30,7 @@ The exercise 1.8 version of the app is deployed by applying the manifest directo
 kubectl apply -f manifests/
 ```
 
-## Deployment (exercises 1.12, 1.13, 2.2, 2.4, 2.6, 2.8)
+## Deployment (exercises 1.12, 1.13, 2.2, 2.4, 2.6, 2.8, 2.9)
 The local persistent volume requires the existence of the `/tmp/kube` directory on `k3d-k3s-default-agent-0`. The app is deployed by applying the manifest directory:
 
 ```bash

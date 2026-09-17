@@ -16,7 +16,7 @@
       margin-top: 1rem;
     }
 
-    #todo-list li[role="button"] {
+    #todo-list li {
       /* Force Pico's button contrast color to normal body text */
       --pico-color: var(--pico-contrast, #111827);
       color: var(--pico-color) !important;
@@ -26,23 +26,24 @@
       border-radius: 8px;
       padding: 0.85rem 1.2rem;
       margin-bottom: 0.75rem;
-      cursor: pointer;
+      cursor: text;
       transition: transform 0.15s ease, box-shadow 0.15s ease, border-color 0.15s ease;
       word-break: break-word;
       display: flex;
       align-items: center;
-      user-select: none;
+      user-select: text;
+      -webkit-user-select: text;
     }
 
     /* Hover & Focus state */
-    #todo-list li[role="button"]:hover {
+    #todo-list li:hover {
       transform: translateY(-2px);
       border-color: var(--pico-primary, #0172ad);
       box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
       background-color: var(--pico-card-background-color, #f8f9fa);
     }
 
-    #todo-list li[role="button"]:active {
+    #todo-list li:active {
       transform: translateY(0);
       box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
     }
@@ -63,7 +64,7 @@
     <button type="submit">Add Todo</button>
   </form>
 
-  <h2>Your Todos</h2>
+  <h2>These are your Todos</h2>
   <ul id="todo-list"></ul>
 
   <script>
@@ -79,8 +80,8 @@
         todoList.innerHTML = '';
         todos.forEach(todo => {
           const li = document.createElement('li');
-          li.setAttribute('role', 'button');
-          li.setAttribute('tabindex', '0');
+          // li.setAttribute('role', 'button');
+          // li.setAttribute('tabindex', '0');
           li.textContent = todo;
           todoList.appendChild(li);
         });
@@ -99,7 +100,7 @@
         const res = await fetch('/api/todos', {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ text: task }) // <--- FIX: Wrap task in an object
+          body: JSON.stringify({ text: task })
         });
 
         if (res.ok) {

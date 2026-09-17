@@ -1,0 +1,38 @@
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: post-wiki-todo
+  namespace: project
+spec:
+  schedule: "0 * * * *"
+  jobTemplate:
+    spec:
+      template:
+        spec:
+          containers:
+          - name: post-wiki-todo
+            image: curlimages/curl
+            imagePullPolicy: IfNotPresent
+            command:
+            - /bin/sh
+            - -c
+            args:
+            - |
+              set -e
+              
+              # 1. Fetch random Wikipedia URL
+              URL=$(curl -s -L -w "%{url_effective}" -o /dev/null "https://en.wikipedia.org/wiki/Special:Random")
+              
+              # 2. Format title and safely truncate to stay within 140 chars
+              TEXT="Read: ${URL}"
+              TEXT_TRUNCATED=$(echo "$TEXT" | cut -c1-140)
+              
+              echo "Submitting todo (${#TEXT_TRUNCATED} chars): ${TEXT_TRUNCATED}"
+              
+              # 3. PUT to /api/todos
+              curl -s -f -X PUT "http://todo-backend-svc.project.svc.cluster.local/api/todos" \
+                -H "Content-Type: application/json" \
+                -d "{\"text\": \"${TEXT_TRUNCATED}\"}"
+              
+              echo "Successfully created todo."
+          restartPolicy: OnFailure
