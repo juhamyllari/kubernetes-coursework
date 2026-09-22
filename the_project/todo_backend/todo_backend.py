@@ -1,12 +1,31 @@
 import os
 from contextlib import asynccontextmanager
 from fastapi import FastAPI, HTTPException, status
-from pydantic import BaseModel, StringConstraints
+from pydantic import BaseModel, StringConstraints, field_validator
 from typing import Annotated
 from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession, async_sessionmaker
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 from sqlalchemy import select
+import logging
+import structlog
 
+logging.basicConfig(level=logging.INFO)
+
+structlog.configure(
+    processors=[
+        structlog.stdlib.add_log_level,
+        structlog.stdlib.add_logger_name,
+        structlog.processors.JSONRenderer(),
+    ],
+    context_class=dict,
+    logger_factory=structlog.stdlib.LoggerFactory(),
+    wrapper_class=structlog.stdlib.BoundLogger,
+    cache_logger_on_first_use=True,
+)
+
+logger = structlog.get_logger()
+
+MAX_TODO_LENGTH = int(os.getenv("MAX_TODO_LENGTH"))
 DB_USER = os.environ.get("POSTGRES_USER")
 DB_PASSWORD = os.environ.get("POSTGRES_PASSWORD")
 DB_HOST = os.environ.get("POSTGRES_HOST")
@@ -34,11 +53,24 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(lifespan=lifespan)
 
-# Pydantic schema for validation
-TodoText = Annotated[str, StringConstraints(max_length=140)]
-
 class TodoCreate(BaseModel):
-    text: TodoText
+    text: str
+
+    @field_validator("text")
+    @classmethod
+    def validate_length(cls, v: str) -> str:
+        if not (1 <= len(v) <= MAX_TODO_LENGTH):
+            truncated = v[:1000] + ("..." if len(v) > 1000 else "")
+            logger.warning(
+                "Rejected todo due to invalid length",
+                length=len(v),
+                max_length=MAX_TODO_LENGTH,
+                text=truncated,
+            )
+            raise ValueError(
+                f"Todo text length must be between 1 and {MAX_TODO_LENGTH} characters."
+            )
+        return v
 
 @app.get("/api/todos", response_model=list[str])
 async def get_todos():
@@ -52,6 +84,7 @@ async def create_todo(payload: TodoCreate):
         new_todo = TodoItem(text=payload.text)
         session.add(new_todo)
         await session.commit()
+        logger.info("Created new todo item", text=payload.text)
         return new_todo.text
 
 if __name__ == "__main__":

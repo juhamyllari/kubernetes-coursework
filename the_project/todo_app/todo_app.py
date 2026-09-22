@@ -13,9 +13,13 @@ IMAGE_FILENAME = os.environ.get("IMAGE_FILENAME")
 IMAGE_PATH = os.path.join(STORAGE_DIR, IMAGE_FILENAME)
 IMAGE_SOURCE_URL = os.environ.get("IMAGE_SOURCE_URL")
 IMAGE_MAX_AGE = int(os.environ.get("IMAGE_MAX_AGE"))  # in seconds
+MAX_TODO_LENGTH = int(os.getenv("MAX_TODO_LENGTH"))
 
 app = FastAPI()
 templates = Jinja2Templates(directory="templates")
+
+# Register the maximum TODO length as a Jinja2 global variable
+templates.env.globals["MAX_TODO_LENGTH"] = MAX_TODO_LENGTH
 
 def get_image_age():
     if os.path.exists(IMAGE_PATH):

@@ -10,3 +10,4 @@ data:
   IMAGE_FILENAME: "cached_image.jpg"
   IMAGE_SOURCE_URL: "https://picsum.photos/600/450"
   IMAGE_MAX_AGE: "600"
+  MAX_TODO_LENGTH: "140"

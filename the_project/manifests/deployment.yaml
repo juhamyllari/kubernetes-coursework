@@ -15,7 +15,7 @@ spec:
     spec:
       containers:
       - name: todo-app
-        image: juhamyllari/todo-app:v2.9.0
+        image: juhamyllari/todo-app:v2.10.0
         env:
           - name: BACKEND_PORT
             valueFrom:
@@ -47,6 +47,11 @@ spec:
               configMapKeyRef:
                 name: log-configmap
                 key: IMAGE_MAX_AGE
+          - name: MAX_TODO_LENGTH
+            valueFrom:
+              configMapKeyRef:
+                name: log-configmap
+                key: MAX_TODO_LENGTH
         volumeMounts:
         - name: data-volume
           mountPath: /data
@@ -72,7 +77,7 @@ spec:
     spec:
       containers:
       - name: todo-backend
-        image: juhamyllari/todo-backend:v2.8.0
+        image: juhamyllari/todo-backend:v2.10.3
         envFrom:
           - secretRef:
               name: postgres-secret
@@ -82,3 +87,8 @@ spec:
               configMapKeyRef:
                 name: log-configmap
                 key: BACKEND_PORT
+          - name: MAX_TODO_LENGTH
+            valueFrom:
+              configMapKeyRef:
+                name: log-configmap
+                key: MAX_TODO_LENGTH
