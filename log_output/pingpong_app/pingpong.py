@@ -57,5 +57,10 @@ async def get_counter():
         val = await conn.fetchval("SELECT val FROM counters WHERE id = 1;")
         return {"counter": val}
 
+# For GKE health checks we need a simple endpoint that returns 200 OK
+@app.get("/")
+async def health_check():
+    return {"status": "ok"}
+
 if __name__ == "__main__":
     uvicorn.run(app, host="0.0.0.0", port=8000)

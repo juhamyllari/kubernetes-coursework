@@ -1,36 +1,36 @@
-# apiVersion: apps/v1
-# kind: Deployment
-# metadata:
-#   name: stamppong-deployment
-#   namespace: exercises
-# spec:
-#   replicas: 1
-#   selector:
-#     matchLabels:
-#       app: stamppong
-#   template:
-#     metadata:
-#       labels:
-#         app: stamppong
-#     spec:
-#       containers:
-#       - name: stamppong
-#         image: juhamyllari/stamppong:v2.5.1
-#         env:
-#           - name: COUNTER_SERVICE_URL
-#             value: "http://pingpong-svc:2345/pings"
-#           - name: MESSAGE
-#             valueFrom:
-#               configMapKeyRef:
-#                 name: log-configmap
-#                 key: MESSAGE
-#         volumeMounts:
-#           - name: config-volume
-#             mountPath: /etc/config
-#       volumes:
-#         - name: config-volume
-#           configMap:
-#             name: log-configmap
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: stamppong-deployment
+  namespace: exercises
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: stamppong
+  template:
+    metadata:
+      labels:
+        app: stamppong
+    spec:
+      containers:
+      - name: stamppong
+        image: juhamyllari/stamppong:v3.2.0
+        env:
+          - name: COUNTER_SERVICE_URL
+            value: "http://pingpong-svc:80/pings"
+          - name: MESSAGE
+            valueFrom:
+              configMapKeyRef:
+                name: log-configmap
+                key: MESSAGE
+        volumeMounts:
+          - name: config-volume
+            mountPath: /etc/config
+      volumes:
+        - name: config-volume
+          configMap:
+            name: log-configmap
 ---
 apiVersion: apps/v1
 kind: Deployment
@@ -49,7 +49,7 @@ spec:
     spec:
       containers:
       - name: pingpong
-        image: juhamyllari/pingpong:v2.7.0
+        image: juhamyllari/pingpong:v3.2.0
         envFrom:
         - secretRef:
             name: postgres-secret
