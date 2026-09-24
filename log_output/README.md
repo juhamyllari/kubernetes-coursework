@@ -14,9 +14,10 @@ Deploy using the manifest file `log_output/deployment.yaml`:
 kubectl apply -f log_output/deployment.yaml
 ```
 
-## Deployment (exercises 1.7, 1.9, 1.10, 1.11, 2.1, 2.3, 2.5, 2.7)
+## Deployment (exercises 1.7, 1.9, 1.10, 1.11, 2.1, 2.3, 2.5, 2.7, 3.1)
 Deploy by applying the manifest directory `log_output/manifests`:
 
 ```bash
 kubectl apply -f log_output/manifests
 ```
+

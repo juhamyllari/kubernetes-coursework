@@ -27,3 +27,6 @@ My coursework for the UH Kubernetes course
 - [2.8.](https://github.com/juhamyllari/kubernetes-coursework/tree/2.8/the_project)
 - [2.9.](https://github.com/juhamyllari/kubernetes-coursework/tree/2.9/the_project)
 - [2.10.](https://github.com/juhamyllari/kubernetes-coursework/tree/2.10/the_project)
+
+## Chapter 4
+- [3.1.](https://github.com/juhamyllari/kubernetes-coursework/tree/3.1/log_output)
