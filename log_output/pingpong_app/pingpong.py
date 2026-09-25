@@ -40,7 +40,8 @@ async def lifespan(app: FastAPI):
 # Pass lifespan context manager directly to FastAPI initialization
 app = FastAPI(lifespan=lifespan)
 
-@app.get("/pingpong")
+# In exercise 3.4, we introduce route rewriting, so instead of the /pingpong route we will use the root route /.
+@app.get("/")
 async def increment_counter():
     async with pool.acquire() as conn:
         val = await conn.fetchval("""
@@ -56,11 +57,6 @@ async def get_counter():
     async with pool.acquire() as conn:
         val = await conn.fetchval("SELECT val FROM counters WHERE id = 1;")
         return {"counter": val}
-
-# For GKE health checks we need a simple endpoint that returns 200 OK
-@app.get("/")
-async def health_check():
-    return {"status": "ok"}
 
 if __name__ == "__main__":
     uvicorn.run(app, host="0.0.0.0", port=8000)
