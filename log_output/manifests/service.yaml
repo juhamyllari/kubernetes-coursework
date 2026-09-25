@@ -4,7 +4,7 @@ metadata:
   name: stamppong-svc
   namespace: exercises
 spec:
-  type: NodePort
+  type: ClusterIP
   selector:
     app: stamppong
   ports:
@@ -18,7 +18,7 @@ metadata:
   name: pingpong-svc
   namespace: exercises
 spec:
-  type: NodePort
+  type: ClusterIP
   selector:
     app: pingpong
   ports:
