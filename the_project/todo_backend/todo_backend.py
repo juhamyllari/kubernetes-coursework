@@ -87,8 +87,12 @@ async def create_todo(payload: TodoCreate):
         logger.info("Created new todo item", text=payload.text)
         return new_todo.text
 
+@app.get("/")
+async def health():
+    return {"status": "ok"}
+
 if __name__ == "__main__":
     BACKEND_PORT = int(os.environ["BACKEND_PORT"])
     import uvicorn
-    uvicorn.run("todo_backend:app", host="0.0.0.0", port=BACKEND_PORT, reload=True)
+    uvicorn.run("todo_backend:app", host="0.0.0.0", port=BACKEND_PORT, reload=False)
     

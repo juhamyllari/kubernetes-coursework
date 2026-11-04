@@ -77,7 +77,7 @@ spec:
     spec:
       containers:
       - name: todo-backend
-        image: juhamyllari/todo-backend:v2.10.3
+        image: juhamyllari/todo-backend:v3.5.2
         envFrom:
           - secretRef:
               name: postgres-secret

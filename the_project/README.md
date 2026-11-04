@@ -36,3 +36,10 @@ The local persistent volume requires the existence of the `/tmp/kube` directory 
 ```bash
 kubectl apply -f manifests/
 ```
+
+## Deployment (exercise 3.5+)
+From exercise 3.5 onwards, the project uses Kustomize. To deploy the app, run the following command:
+
+```bash
+kubectl apply -k .
+```
