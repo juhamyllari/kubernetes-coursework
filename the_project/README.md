@@ -45,3 +45,9 @@ Pushing to the `main` branch triggers a GitHub Actions workflow that builds and 
 
 Kustomize generates the `postgres-secret` Secret from a gitignored `postgres-secret.env` file.
 In CI the file is written from the `POSTGRES_PASSWORD` GitHub secret.
+
+## Deployment (exercise 3.7+)
+The workflow runs on a push to any branch. The `main` branch deploys to the `project` namespace;
+any other branch deploys to a namespace named after the branch (the branch name must be a valid namespace name).
+The workflow sets the namespace with `kustomize edit set namespace`, so the manifests do not hardcode one.
+Namespaces are not yet removed automatically in exercise 3.7 when a branch is deleted – this will be done in exercise 3.8.

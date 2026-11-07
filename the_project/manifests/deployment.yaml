@@ -2,7 +2,6 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: todo-dep
-  namespace: project
 spec:
   replicas: 1
   # local-pvc is ReadWriteOnce (single-node attach); a surging rolling update
@@ -68,7 +67,6 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: todo-backend-dep
-  namespace: project
 spec:
   replicas: 1
   selector:
