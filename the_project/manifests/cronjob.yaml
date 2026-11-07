@@ -2,7 +2,6 @@ apiVersion: batch/v1
 kind: CronJob
 metadata:
   name: post-wiki-todo
-  namespace: project
 spec:
   schedule: "0 * * * *"
   jobTemplate:
@@ -30,7 +29,7 @@ spec:
               echo "Submitting todo (${#TEXT_TRUNCATED} chars): ${TEXT_TRUNCATED}"
               
               # 3. PUT to /api/todos
-              curl -s -f -X PUT "http://todo-backend-svc.project.svc.cluster.local/api/todos" \
+              curl -s -f -X PUT "http://todo-backend-svc/api/todos" \
                 -H "Content-Type: application/json" \
                 -d "{\"text\": \"${TEXT_TRUNCATED}\"}"
               

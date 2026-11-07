@@ -3,7 +3,7 @@ name: Release application
 on:
   push:
     branches:
-      - main
+      - '**'
 
 permissions:
   contents: read
@@ -69,6 +69,13 @@ jobs:
           docker build --tag "$IMAGE_BASE/frontend:$IMAGE_TAG" "$APP_DIR/todo_app"
           docker push "$IMAGE_BASE/frontend:$IMAGE_TAG"
 
+      # main deploys to "project"; any other branch deploys to a namespace
+      # named after the branch (assumed to be a valid namespace name).
+      - name: Compute namespace
+        run: |
+          if [ "$BRANCH" = "main" ]; then NS=project; else NS="$BRANCH"; fi
+          echo "NAMESPACE=$NS" >> "$GITHUB_ENV"
+
       - name: Set up Kustomize
         uses: imranismail/setup-kustomize@v3
 
@@ -84,8 +91,9 @@ jobs:
       - name: Deploy
         working-directory: ${{ env.APP_DIR }}
         run: |-
+          kustomize edit set namespace "$NAMESPACE"
           kustomize edit set image juhamyllari/todo-backend="$IMAGE_BASE/backend:$IMAGE_TAG"
           kustomize edit set image juhamyllari/todo-app="$IMAGE_BASE/frontend:$IMAGE_TAG"
           kustomize build . | kubectl apply -f -
-          kubectl -n project rollout status deployment/todo-backend-dep --timeout=5m
-          kubectl -n project rollout status deployment/todo-dep --timeout=5m
+          kubectl -n "$NAMESPACE" rollout status deployment/todo-backend-dep --timeout=5m
+          kubectl -n "$NAMESPACE" rollout status deployment/todo-dep --timeout=5m
