@@ -12,6 +12,17 @@ resources:
   - manifests/service.yaml
   - manifests/cronjob.yaml
 
+# Marks the Namespace as created by the branch pipeline; the cleanup workflow
+# only deletes namespaces carrying this label.
+patches:
+  - target:
+      kind: Namespace
+    patch: |-
+      - op: add
+        path: /metadata/labels
+        value:
+          deployed-by: branch-pipeline
+
 # The Postgres password is never committed. postgres-secret.env (gitignored)
 # must contain a line POSTGRES_PASSWORD=...; CI writes it from a GitHub secret.
 # The generated Secret name gets a content hash, so changing the password

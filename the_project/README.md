@@ -51,3 +51,7 @@ The workflow runs on a push to any branch. The `main` branch deploys to the `pro
 any other branch deploys to a namespace named after the branch (the branch name must be a valid namespace name).
 The workflow sets the namespace with `kustomize edit set namespace`, so the manifests do not hardcode one.
 Namespaces are not yet removed automatically in exercise 3.7 when a branch is deleted – this will be done in exercise 3.8.
+
+## Cleanup of branch deployments (exercise 3.8+)
+Deleting a branch triggers `.github/workflows/cleanup.yaml`, which deletes the branch's namespace.
+Only namespaces labelled `deployed-by=branch-pipeline` (set by a Kustomize patch) are deleted, and `project` is never deleted.

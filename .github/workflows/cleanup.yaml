@@ -1,0 +1,50 @@
+name: Clean up branch deployment
+
+# Runs when a branch is deleted and removes the namespace it was deployed to.
+# Note: `delete` workflows always run from the default branch's copy of this file.
+on: delete
+
+permissions:
+  contents: read
+  id-token: write
+
+env:
+  GKE_CLUSTER: dwk-cluster
+  GKE_ZONE: europe-north1-b
+
+jobs:
+  cleanup:
+    name: Delete branch namespace
+    # Ignore tags and the main branch (main deploys to the "project" namespace).
+    if: github.event.ref_type == 'branch' && github.event.ref != 'main'
+    runs-on: ubuntu-latest
+    environment: GKE_PROJECT
+
+    steps:
+      - name: 'Authenticate with Google Cloud'
+        uses: google-github-actions/auth@v3
+        with:
+          workload_identity_provider: "${{ secrets.WORKLOAD_IDENTITY_PROVIDER }}"
+          service_account: "${{ secrets.SERVICE_ACCOUNT }}"
+
+      - name: 'Get GKE credentials'
+        uses: 'google-github-actions/get-gke-credentials@v3'
+        with:
+          cluster_name: '${{ env.GKE_CLUSTER }}'
+          project_id: '${{ secrets.GKE_PROJECT }}'
+          location: '${{ env.GKE_ZONE }}'
+
+      - name: Delete namespace
+        env:
+          NS: ${{ github.event.ref }}
+        run: |
+          if [ "$NS" = "project" ]; then
+            echo "Refusing to delete the project namespace"
+            exit 0
+          fi
+          label=$(kubectl get namespace "$NS" -o jsonpath='{.metadata.labels.deployed-by}' --ignore-not-found)
+          if [ "$label" != "branch-pipeline" ]; then
+            echo "Namespace '$NS' not found or not created by the branch pipeline; nothing to do"
+            exit 0
+          fi
+          kubectl delete namespace "$NS" --wait=false
