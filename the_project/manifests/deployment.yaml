@@ -5,6 +5,10 @@ metadata:
   namespace: project
 spec:
   replicas: 1
+  # local-pvc is ReadWriteOnce (single-node attach); a surging rolling update
+  # can deadlock if the new pod is scheduled on another node.
+  strategy:
+    type: Recreate
   selector:
     matchLabels:
       app: todo-app
@@ -81,6 +85,8 @@ spec:
         envFrom:
           - secretRef:
               name: postgres-secret
+          - configMapRef:
+              name: postgres-config
         env:
           - name: BACKEND_PORT
             valueFrom:

@@ -6,8 +6,24 @@ resources:
   - manifests/deployment.yaml
   - manifests/ingress.yaml
   - manifests/persistentvolumeclaim.yaml
-  - manifests/postgres-secret.yaml
+  - manifests/postgres-config.yaml
   - manifests/postgres-statefulset.yaml
   - manifests/service.yaml
   - manifests/cronjob.yaml
 
+# The Postgres password is never committed. postgres-secret.env (gitignored)
+# must contain a line POSTGRES_PASSWORD=...; CI writes it from a GitHub secret.
+# The generated Secret name gets a content hash, so changing the password
+# rolls the pods that reference it.
+secretGenerator:
+  - name: postgres-secret
+    envs:
+      - postgres-secret.env
+
+# Image overrides. `name` must match the image name used in the manifests;
+# CI rewrites newName/newTag with `kustomize edit set image`.
+images:
+  - name: juhamyllari/todo-app
+    newTag: v2.10.0
+  - name: juhamyllari/todo-backend
+    newTag: v3.5.2

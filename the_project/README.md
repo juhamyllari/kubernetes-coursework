@@ -38,8 +38,10 @@ kubectl apply -f manifests/
 ```
 
 ## Deployment (exercise 3.5+)
-From exercise 3.5 onwards, the project uses Kustomize. To deploy the app, run the following command:
+From exercise 3.5 onwards, the project uses Kustomize.
 
-```bash
-kubectl apply -k .
-```
+## Deployment (exercise 3.6+)
+Pushing to the `main` branch triggers a GitHub Actions workflow that builds and pushes the images and deploys the app.
+
+Kustomize generates the `postgres-secret` Secret from a gitignored `postgres-secret.env` file.
+In CI the file is written from the `POSTGRES_PASSWORD` GitHub secret.

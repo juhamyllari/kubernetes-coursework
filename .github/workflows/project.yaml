@@ -1,0 +1,91 @@
+name: Release application
+
+on:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: read
+  id-token: write
+
+env:
+    PROJECT_ID: ${{ secrets.GKE_PROJECT }}
+    GKE_CLUSTER: dwk-cluster
+    GKE_ZONE: europe-north1-b
+    REGISTRY: europe-north1-docker.pkg.dev
+    REGISTRY_LOCATION: europe-north1
+    REPOSITORY: dwk-repo
+    BRANCH: ${{ github.ref_name }}
+    APP_DIR: "the_project"
+    IMAGE_TAG: ${{ github.sha }}
+  
+jobs:
+  build-publish-deploy:
+    name: Build, Publish and Deploy
+    runs-on: ubuntu-latest
+    environment: GKE_PROJECT
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: 'Authenticate with Google Cloud'
+        uses: google-github-actions/auth@v3
+        with:
+          workload_identity_provider: "${{ secrets.WORKLOAD_IDENTITY_PROVIDER }}"
+          service_account: "${{ secrets.SERVICE_ACCOUNT }}"
+
+      - name: 'Set up Cloud SDK'
+        uses: google-github-actions/setup-gcloud@v3
+        with:
+          project_id: ${{ secrets.GKE_PROJECT }}
+          version: latest
+      
+      - name: 'Use gcloud CLI'
+        run: gcloud info
+
+      - name: 'Configure Docker'
+        run: gcloud --quiet auth configure-docker $REGISTRY
+
+      - name: 'Get GKE credentials'
+        uses: 'google-github-actions/get-gke-credentials@v3'
+        with:
+          cluster_name: '${{ env.GKE_CLUSTER }}'
+          project_id: '${{ env.PROJECT_ID }}'
+          location: '${{ env.GKE_ZONE }}'
+      
+        # e.g. europe-north1-docker.pkg.dev/my-project/my-repo
+      - name: Compute image base path
+        run: echo "IMAGE_BASE=${REGISTRY}/${PROJECT_ID}/${REPOSITORY}" >> "$GITHUB_ENV"
+            
+      - name: Build and push backend
+        run: |
+          docker build --tag "$IMAGE_BASE/backend:$IMAGE_TAG" "$APP_DIR/todo_backend"
+          docker push "$IMAGE_BASE/backend:$IMAGE_TAG"
+ 
+      - name: Build and push frontend
+        run: |
+          docker build --tag "$IMAGE_BASE/frontend:$IMAGE_TAG" "$APP_DIR/todo_app"
+          docker push "$IMAGE_BASE/frontend:$IMAGE_TAG"
+
+      - name: Set up Kustomize
+        uses: imranismail/setup-kustomize@v3
+
+      - name: Write Postgres secret env file
+        working-directory: ${{ env.APP_DIR }}
+        env:
+          POSTGRES_PASSWORD: ${{ secrets.POSTGRES_PASSWORD }}
+        run: |
+          test -n "$POSTGRES_PASSWORD" || { echo "POSTGRES_PASSWORD secret is not set"; exit 1; }
+          umask 077
+          printf 'POSTGRES_PASSWORD=%s\n' "$POSTGRES_PASSWORD" > postgres-secret.env
+
+      - name: Deploy
+        working-directory: ${{ env.APP_DIR }}
+        run: |-
+          kustomize edit set image juhamyllari/todo-backend="$IMAGE_BASE/backend:$IMAGE_TAG"
+          kustomize edit set image juhamyllari/todo-app="$IMAGE_BASE/frontend:$IMAGE_TAG"
+          kustomize build . | kubectl apply -f -
+          kubectl -n project rollout status deployment/todo-backend-dep --timeout=5m
+          kubectl -n project rollout status deployment/todo-dep --timeout=5m
