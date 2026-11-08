@@ -32,10 +32,14 @@ secretGenerator:
     envs:
       - postgres-secret.env
 
-# Image overrides. `name` must match the image name used in the manifests;
-# CI rewrites newName/newTag with `kustomize edit set image`.
+# Image overrides. `name` is a placeholder that must match the image name used
+# in the manifests; the manifests carry no registry or version. newName/newTag
+# here are the local-build fallback (Docker Hub); CI rewrites them with
+# `kustomize edit set image`.
 images:
-  - name: juhamyllari/todo-app
+  - name: todo-frontend
+    newName: juhamyllari/todo-app
     newTag: v2.10.0
-  - name: juhamyllari/todo-backend
+  - name: todo-backend
+    newName: juhamyllari/todo-backend
     newTag: v3.5.2

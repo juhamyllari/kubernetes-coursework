@@ -92,8 +92,8 @@ jobs:
         working-directory: ${{ env.APP_DIR }}
         run: |-
           kustomize edit set namespace "$NAMESPACE"
-          kustomize edit set image juhamyllari/todo-backend="$IMAGE_BASE/backend:$IMAGE_TAG"
-          kustomize edit set image juhamyllari/todo-app="$IMAGE_BASE/frontend:$IMAGE_TAG"
+          kustomize edit set image todo-backend="$IMAGE_BASE/backend:$IMAGE_TAG"
+          kustomize edit set image todo-frontend="$IMAGE_BASE/frontend:$IMAGE_TAG"
           kustomize build . | kubectl apply -f -
           kubectl -n "$NAMESPACE" rollout status deployment/todo-backend-dep --timeout=5m
           kubectl -n "$NAMESPACE" rollout status deployment/todo-dep --timeout=5m
