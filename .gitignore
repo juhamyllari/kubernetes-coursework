@@ -2,3 +2,4 @@ __pycache__/
 *.pyc
 .vscode/
 the_project/postgres-secret.env
+the_project/backup-config.env

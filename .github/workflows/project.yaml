@@ -88,6 +88,14 @@ jobs:
           umask 077
           printf 'POSTGRES_PASSWORD=%s\n' "$POSTGRES_PASSWORD" > postgres-secret.env
 
+      - name: Write backup config env file
+        working-directory: ${{ env.APP_DIR }}
+        env:
+          BACKUP_BUCKET: ${{ secrets.BACKUP_BUCKET }}
+        run: |
+          test -n "$BACKUP_BUCKET" || { echo "BACKUP_BUCKET secret is not set"; exit 1; }
+          printf 'BACKUP_BUCKET=%s\n' "$BACKUP_BUCKET" > backup-config.env
+
       - name: Deploy
         working-directory: ${{ env.APP_DIR }}
         run: |-

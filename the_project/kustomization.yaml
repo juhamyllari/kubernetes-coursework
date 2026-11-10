@@ -11,6 +11,8 @@ resources:
   - manifests/postgres-statefulset.yaml
   - manifests/service.yaml
   - manifests/cronjob.yaml
+  - manifests/backup-serviceaccount.yaml
+  - manifests/backup-cronjob.yaml
 
 # Marks the Namespace as created by the branch pipeline; the cleanup workflow
 # only deletes namespaces carrying this label.
@@ -31,6 +33,14 @@ secretGenerator:
   - name: postgres-secret
     envs:
       - postgres-secret.env
+
+# The backup bucket name is not committed either. backup-config.env (gitignored)
+# must contain a line BACKUP_BUCKET=<bucket name, without gs://>; CI writes it
+# from a GitHub secret.
+configMapGenerator:
+  - name: backup-config
+    envs:
+      - backup-config.env
 
 # Image overrides. `name` is a placeholder that must match the image name used
 # in the manifests; the manifests carry no registry or version. newName/newTag

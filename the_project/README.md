@@ -65,3 +65,54 @@ The DBaaS option is easier to set up and maintain, and backups can be handled au
 
 
 
+
+## Exercise 3.10: Daily database backups to Cloud Storage
+`manifests/backup-cronjob.yaml` runs daily at 03:00 UTC. An init container (`postgres:16-alpine`) runs `pg_dump -Fc` into an `emptyDir`,
+then the main container (`google/cloud-sdk`) uploads the file to `gs://<bucket>/<namespace>/tododb-<timestamp>.pgdump`.
+The upload is authorised with Workload Identity Federation for GKE: the pod runs as the Kubernetes ServiceAccount `db-backup`,
+which is granted write access to the bucket directly in IAM. No key file is stored.
+
+One-time setup:
+```bash
+export PROJECT_ID=<your GCP project ID>
+export PROJECT_NUMBER=$(gcloud projects describe $PROJECT_ID --format='value(projectNumber)')
+export BUCKET=<globally unique bucket name, e.g. $PROJECT_ID-todo-db-backups>
+
+# Workload Identity must be enabled on the cluster; this prints $PROJECT_ID.svc.id.goog if it is
+# (if empty, see "Cluster creation" below for enabling it on an existing cluster)
+gcloud container clusters describe dwk-cluster --zone europe-north1-b --format='value(workloadIdentityConfig.workloadPool)'
+
+gcloud storage buckets create gs://$BUCKET --location=europe-north1 --uniform-bucket-level-access
+
+# Allow the db-backup ServiceAccount of the `project` namespace to create objects in the bucket only
+gcloud storage buckets add-iam-policy-binding gs://$BUCKET \
+  --role=roles/storage.objectCreator \
+  --member="principal://iam.googleapis.com/projects/$PROJECT_NUMBER/locations/global/workloadIdentityPools/$PROJECT_ID.svc.id.goog/subject/ns/project/sa/db-backup"
+```
+The IAM binding names a namespace, so only the `project` namespace (main branch) can upload. Backup jobs in branch namespaces fail with a permission error unless an equivalent binding is added for them.
+The bucket name is not committed. Kustomize generates the `backup-config` ConfigMap from a gitignored `backup-config.env` file
+containing `BACKUP_BUCKET=<bucket name>` (no `gs://`). In CI the file is written from the `BACKUP_BUCKET` GitHub secret.
+For a local `kubectl apply -k .`, create the file yourself.
+
+Test it without waiting for the schedule:
+```bash
+kubectl -n project create job --from=cronjob/db-backup db-backup-test
+kubectl -n project logs job/db-backup-test -c upload
+```
+
+### Cluster creation
+The cluster is not defined in the repo, so its creation command is recorded here. `--workload-pool` is required for the backups:
+it enables Workload Identity and makes new node pools use the GKE metadata server.
+```bash
+gcloud container clusters create dwk-cluster --zone=europe-north1-b --cluster-version=1.36 \
+  --disk-size=32 --num-nodes=4 --machine-type=e2-small \
+  --workload-pool=$PROJECT_ID.svc.id.goog
+```
+On an existing cluster created without the flag, enable it with:
+```bash
+gcloud container clusters update dwk-cluster --zone europe-north1-b --workload-pool=$PROJECT_ID.svc.id.goog
+gcloud container node-pools update <pool-name> --cluster dwk-cluster --zone europe-north1-b --workload-metadata=GKE_METADATA
+```
+The second command recreates the nodes, so all pods restart.
+The bucket and its IAM binding belong to the project, not the cluster, so they survive cluster deletion and keep working with a recreated cluster.
+The database contents do not survive; restore the latest dump with `pg_restore`.
