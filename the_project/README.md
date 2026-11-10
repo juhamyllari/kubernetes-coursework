@@ -84,9 +84,10 @@ gcloud container clusters describe dwk-cluster --zone europe-north1-b --format='
 
 gcloud storage buckets create gs://$BUCKET --location=europe-north1 --uniform-bucket-level-access
 
-# Allow the db-backup ServiceAccount of the `project` namespace to create objects in the bucket only
+# Allow the db-backup ServiceAccount of the `project` namespace to write objects in the bucket only.
+# objectCreator is not enough: `gcloud storage cp` also needs storage.objects.get to check the destination.
 gcloud storage buckets add-iam-policy-binding gs://$BUCKET \
-  --role=roles/storage.objectCreator \
+  --role=roles/storage.objectUser \
   --member="principal://iam.googleapis.com/projects/$PROJECT_NUMBER/locations/global/workloadIdentityPools/$PROJECT_ID.svc.id.goog/subject/ns/project/sa/db-backup"
 ```
 The IAM binding names a namespace, so only the `project` namespace (main branch) can upload. Backup jobs in branch namespaces fail with a permission error unless an equivalent binding is added for them.
