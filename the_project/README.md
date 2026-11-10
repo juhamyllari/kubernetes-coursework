@@ -55,3 +55,13 @@ Namespaces are not yet removed automatically in exercise 3.7 when a branch is de
 ## Cleanup of branch deployments (exercise 3.8+)
 Deleting a branch triggers `.github/workflows/cleanup.yaml`, which deletes the branch's namespace.
 Only namespaces labelled `deployed-by=branch-pipeline` (set by a Kustomize patch) are deleted, and `project` is never deleted.
+
+## Exercise 3.9: DBaaS vs DIY
+When deploying an app to Google Cloud, we have a choice between using a managed database service (DBaaS) or deploying our own database (DIY). The DIY option is cheaper and keeps the database under the team's control. DIY also offers a portability benefit, as the app setup is defined in its entirety by a collection of Kubernetes manifests and can be deployed to any Kubernetes cluster. However, DIY requires more work to set up and maintain, and the team must have the necessary expertise to do so. No automated backups are provided; the team must implement their own backup solution.
+
+The DBaaS option is easier to set up and maintain, and backups can be handled automatically. The main drawback is the additional cost. DBaaS is also less flexible; the team does not have true superuser access to the database. DBaaS may somewhat contribute to vendor lock-in, but this is not a major concern as data can still be exported in the same way as from any other database.
+
+
+
+
+
