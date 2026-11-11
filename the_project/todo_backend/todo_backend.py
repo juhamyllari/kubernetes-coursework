@@ -1,4 +1,5 @@
 import os
+import sys
 from contextlib import asynccontextmanager
 from fastapi import FastAPI, HTTPException, status
 from pydantic import BaseModel, StringConstraints, field_validator
@@ -9,12 +10,23 @@ from sqlalchemy import select
 import logging
 import structlog
 
-logging.basicConfig(level=logging.INFO)
+# Plain message only, to stdout: Cloud Logging parses single-line JSON into
+# jsonPayload and stderr output would otherwise be labelled ERROR.
+logging.basicConfig(level=logging.INFO, stream=sys.stdout, format="%(message)s")
+
+
+def add_gcp_severity(logger, method_name, event_dict):
+    """Rename structlog's 'level' to the 'severity' field Cloud Logging reads."""
+    level = event_dict.pop("level", method_name).upper()
+    event_dict["severity"] = "WARNING" if level == "WARN" else level
+    return event_dict
+
 
 structlog.configure(
     processors=[
         structlog.stdlib.add_log_level,
         structlog.stdlib.add_logger_name,
+        add_gcp_severity,
         structlog.processors.JSONRenderer(),
     ],
     context_class=dict,
