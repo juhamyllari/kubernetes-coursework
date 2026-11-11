@@ -117,3 +117,8 @@ gcloud container node-pools update <pool-name> --cluster dwk-cluster --zone euro
 The second command recreates the nodes, so all pods restart.
 The bucket and its IAM binding belong to the project, not the cluster, so they survive cluster deletion and keep working with a recreated cluster.
 The database contents do not survive; restore the latest dump with `pg_restore`.
+
+### Logging (exercise 3.12)
+App log in Google Cloud Logging showing the creation of a new todo:
+
+![GKE log of a todo creation](gke-log-screenshot.png)
