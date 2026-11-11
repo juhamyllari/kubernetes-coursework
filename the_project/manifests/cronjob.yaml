@@ -12,6 +12,13 @@ spec:
           - name: post-wiki-todo
             image: curlimages/curl
             imagePullPolicy: IfNotPresent
+            resources:
+              requests:
+                cpu: 10m
+                memory: 16Mi
+              limits:
+                cpu: 100m
+                memory: 32Mi
             command:
             - /bin/sh
             - -c

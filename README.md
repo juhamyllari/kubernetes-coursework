@@ -39,3 +39,4 @@ My coursework for the UH Kubernetes course
 - [3.8.](https://github.com/juhamyllari/kubernetes-coursework/tree/3.8/the_project)
 - [3.9.](https://github.com/juhamyllari/kubernetes-coursework/tree/3.9/the_project)
 - [3.10.](https://github.com/juhamyllari/kubernetes-coursework/tree/3.10/the_project)
+- [3.11.](https://github.com/juhamyllari/kubernetes-coursework/tree/3.11/the_project)

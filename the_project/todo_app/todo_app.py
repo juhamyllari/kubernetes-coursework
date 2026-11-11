@@ -48,4 +48,4 @@ def read_root(request: Request):
 if __name__ == "__main__":
 	port = FRONTEND_PORT
 	print("Server started in port " + str(port), flush=True)
-	uvicorn.run("todo_app:app", host="0.0.0.0", port=port, reload=True)
+	uvicorn.run("todo_app:app", host="0.0.0.0", port=port, reload=False)

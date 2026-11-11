@@ -30,6 +30,13 @@ spec:
       containers:
         - name: postgres
           image: postgres:16-alpine
+          resources:
+            requests:
+              cpu: 100m
+              memory: 256Mi
+            limits:
+              cpu: 500m
+              memory: 512Mi
           ports:
             - containerPort: 5432
               name: postgres
