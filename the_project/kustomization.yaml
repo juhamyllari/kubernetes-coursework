@@ -10,6 +10,7 @@ resources:
   - manifests/postgres-config.yaml
   - manifests/postgres-statefulset.yaml
   - manifests/service.yaml
+  - manifests/hpa.yaml
   - manifests/cronjob.yaml
   - manifests/backup-serviceaccount.yaml
   - manifests/backup-cronjob.yaml
