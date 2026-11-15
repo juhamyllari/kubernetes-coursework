@@ -9,7 +9,6 @@ user = os.getenv("POSTGRES_USER")
 password = os.getenv("POSTGRES_PASSWORD")
 db = os.getenv("POSTGRES_DB")
 
-DATABASE_URL = f"postgresql://{user}:{password}@postgres:5432/{db}"
 
 # Shared connection pool across requests
 pool: asyncpg.Pool = None
@@ -18,7 +17,9 @@ pool: asyncpg.Pool = None
 async def lifespan(app: FastAPI):
     # --- STARTUP LOGIC ---
     global pool
-    pool = await asyncpg.create_pool(dsn=DATABASE_URL)
+    pool = await asyncpg.create_pool(
+        host="postgres", port=5432, user=user, password=password, database=db
+    )
     
     # Initialize table and seed the counter row
     async with pool.acquire() as conn:
@@ -39,6 +40,12 @@ async def lifespan(app: FastAPI):
 
 # Pass lifespan context manager directly to FastAPI initialization
 app = FastAPI(lifespan=lifespan)
+
+# Used by the GKE load balancer health check (see manifests/healthcheck.yaml).
+# Must not touch the counter, unlike "/".
+@app.get("/healthz")
+async def healthz():
+    return {"status": "ok"}
 
 # In exercise 3.4, we introduce route rewriting, so instead of the /pingpong route we will use the root route /.
 @app.get("/")

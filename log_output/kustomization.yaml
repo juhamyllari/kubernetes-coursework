@@ -9,6 +9,7 @@ resources:
   - manifests/route.yaml
   - manifests/postgres-statefulset.yaml
   - manifests/service.yaml
+  - manifests/healthcheck.yaml
 
 # The Postgres password is never committed. postgres-secret.env (gitignored)
 # must contain a line POSTGRES_PASSWORD=...; CI writes it from a GitHub secret.

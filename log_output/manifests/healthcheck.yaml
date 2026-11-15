@@ -1,0 +1,17 @@
+# Tells the GKE load balancer to probe /healthz instead of the default "/",
+# which for pingpong increments the counter.
+apiVersion: networking.gke.io/v1
+kind: HealthCheckPolicy
+metadata:
+  name: pingpong-healthcheck
+  namespace: exercises
+spec:
+  default:
+    config:
+      type: HTTP
+      httpHealthCheck:
+        requestPath: /healthz
+  targetRef:
+    group: ""
+    kind: Service
+    name: pingpong-svc
