@@ -21,3 +21,9 @@ Deploy by applying the manifest directory `log_output/manifests`:
 kubectl apply -f log_output/manifests
 ```
 
+## Deployment (4.1+)
+From exercise 4.1 onwards, the log output app uses Kustomize: 
+
+```bash
+kubectl apply -k .
+```
