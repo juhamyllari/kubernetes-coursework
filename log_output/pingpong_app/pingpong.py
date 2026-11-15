@@ -1,6 +1,7 @@
+import asyncio
 import os
 
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException
 from contextlib import asynccontextmanager
 import uvicorn
 import asyncpg
@@ -10,33 +11,53 @@ password = os.getenv("POSTGRES_PASSWORD")
 db = os.getenv("POSTGRES_DB")
 
 
-# Shared connection pool across requests
+# Shared connection pool across requests; None until the database is reachable
 pool: asyncpg.Pool = None
+
+
+async def connect_to_db():
+    """Keep trying until the database is reachable, then create the table.
+
+    The app starts serving without the database so that /ready can report
+    "not ready" (pod stays Running, but gets no traffic) instead of crashing.
+    """
+    global pool
+    while pool is None:
+        try:
+            p = await asyncpg.create_pool(
+                host="postgres", port=5432, user=user, password=password,
+                database=db, timeout=5,
+            )
+            # Initialize table and seed the counter row
+            async with p.acquire() as conn:
+                await conn.execute("""
+                    CREATE TABLE IF NOT EXISTS counters (
+                        id INT PRIMARY KEY,
+                        val INT NOT NULL DEFAULT 0
+                    );
+                    INSERT INTO counters (id, val)
+                    VALUES (1, 0)
+                    ON CONFLICT (id) DO NOTHING;
+                """)
+            pool = p
+        except Exception as e:
+            print(f"Database not available, retrying: {e}", flush=True)
+            await asyncio.sleep(2)
+
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    # --- STARTUP LOGIC ---
-    global pool
-    pool = await asyncpg.create_pool(
-        host="postgres", port=5432, user=user, password=password, database=db
-    )
-    
-    # Initialize table and seed the counter row
-    async with pool.acquire() as conn:
-        await conn.execute("""
-            CREATE TABLE IF NOT EXISTS counters (
-                id INT PRIMARY KEY,
-                val INT NOT NULL DEFAULT 0
-            );
-            INSERT INTO counters (id, val) 
-            VALUES (1, 0) 
-            ON CONFLICT (id) DO NOTHING;
-        """)
-    
+    task = asyncio.create_task(connect_to_db())
     yield  # The app runs while paused here
+    task.cancel()
+    if pool is not None:
+        await pool.close()
 
-    # --- SHUTDOWN LOGIC ---
-    await pool.close()
+
+def get_pool() -> asyncpg.Pool:
+    if pool is None:
+        raise HTTPException(status_code=503, detail="database not connected")
+    return pool
 
 # Pass lifespan context manager directly to FastAPI initialization
 app = FastAPI(lifespan=lifespan)
@@ -47,10 +68,22 @@ app = FastAPI(lifespan=lifespan)
 async def healthz():
     return {"status": "ok"}
 
+# Readiness probe: ready only if the database answers a query right now.
+@app.get("/ready")
+async def ready():
+    try:
+        async with get_pool().acquire(timeout=2) as conn:
+            await conn.fetchval("SELECT 1;", timeout=2)
+    except HTTPException:
+        raise
+    except Exception:
+        raise HTTPException(status_code=503, detail="database not reachable")
+    return {"status": "ready"}
+
 # In exercise 3.4, we introduce route rewriting, so instead of the /pingpong route we will use the root route /.
 @app.get("/")
 async def increment_counter():
-    async with pool.acquire() as conn:
+    async with get_pool().acquire() as conn:
         val = await conn.fetchval("""
             UPDATE counters 
             SET val = val + 1 
@@ -61,7 +94,7 @@ async def increment_counter():
 
 @app.get("/pings")
 async def get_counter():
-    async with pool.acquire() as conn:
+    async with get_pool().acquire() as conn:
         val = await conn.fetchval("SELECT val FROM counters WHERE id = 1;")
         return {"counter": val}
 

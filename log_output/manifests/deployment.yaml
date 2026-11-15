@@ -53,3 +53,9 @@ spec:
         envFrom:
         - secretRef:
             name: postgres-secret
+        readinessProbe:
+          httpGet:
+            path: /ready
+            port: 8000
+          periodSeconds: 5
+          failureThreshold: 2
