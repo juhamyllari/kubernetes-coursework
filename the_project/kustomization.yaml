@@ -5,7 +5,8 @@ resources:
   - manifests/namespace.yaml
   - manifests/app-config.yaml
   - manifests/deployment.yaml
-  - manifests/ingress.yaml
+  - manifests/gateway.yaml
+  - manifests/route.yaml
   - manifests/persistentvolumeclaim.yaml
   - manifests/postgres-config.yaml
   - manifests/postgres-statefulset.yaml

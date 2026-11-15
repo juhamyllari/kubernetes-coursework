@@ -15,7 +15,7 @@ spec:
     spec:
       containers:
       - name: stamppong
-        image: juhamyllari/stamppong:v3.2.0
+        image: stamppong
         env:
           - name: COUNTER_SERVICE_URL
             value: "http://pingpong-svc:80/pings"
@@ -49,7 +49,7 @@ spec:
     spec:
       containers:
       - name: pingpong
-        image: juhamyllari/pingpong:v3.4.0
+        image: pingpong
         envFrom:
         - secretRef:
             name: postgres-secret

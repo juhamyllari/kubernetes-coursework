@@ -4,6 +4,9 @@ on:
   push:
     branches:
       - '**'
+    paths:
+      - 'the_project/**'
+      - '.github/workflows/project.yaml'
 
 permissions:
   contents: read
