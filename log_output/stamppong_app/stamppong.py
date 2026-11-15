@@ -2,7 +2,7 @@ import os
 import uuid
 from datetime import datetime, timezone
 import httpx
-from fastapi import FastAPI, Response, status
+from fastapi import FastAPI, HTTPException, Response, status
 
 app = FastAPI()
 
@@ -32,17 +32,36 @@ MESSAGE = os.environ.get("MESSAGE", "Hello, World!")
 
 combined_message = f"file content: {config_file_content}\nenv variable: MESSAGE={MESSAGE}"
 
+async def fetch_pong_count(timeout: float = 3.0) -> int:
+    """Fetch the current counter value from the pingpong service.
+
+    Raises on any failure (connection error, timeout, non-2xx, missing counter).
+    """
+    async with httpx.AsyncClient(timeout=timeout) as client:
+        response = await client.get(COUNTER_SERVICE_URL)
+        response.raise_for_status()
+        return response.json()["counter"]
+
+
 async def get_pong_count() -> int:
-    """Fetch the current counter value asynchronously from the pingpong service."""
+    """Like fetch_pong_count, but returns -1 on failure."""
     try:
-        async with httpx.AsyncClient(timeout=3.0) as client:
-            response = await client.get(COUNTER_SERVICE_URL)
-            response.raise_for_status()
-            data = response.json()
-            return data.get("counter", 0)
+        return await fetch_pong_count()
     except Exception as e:
         print(f"Error fetching pong count: {e}")
         return -1
+
+
+# Readiness probe: ready only if we can actually get data from pingpong.
+# Uses /pings, which only reads the counter (unlike pingpong's "/").
+@app.get("/ready")
+async def ready():
+    try:
+        await fetch_pong_count(timeout=2.0)
+    except Exception as e:
+        print(f"Not ready, pingpong unavailable: {e}")
+        raise HTTPException(status_code=503, detail="pingpong not reachable")
+    return {"status": "ready"}
 
 
 @app.get("/", response_class=Response)

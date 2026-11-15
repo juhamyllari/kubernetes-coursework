@@ -24,6 +24,13 @@ spec:
               configMapKeyRef:
                 name: log-configmap
                 key: MESSAGE
+        readinessProbe:
+          httpGet:
+            path: /ready
+            port: 8000
+          periodSeconds: 5
+          timeoutSeconds: 3
+          failureThreshold: 2
         volumeMounts:
           - name: config-volume
             mountPath: /etc/config
