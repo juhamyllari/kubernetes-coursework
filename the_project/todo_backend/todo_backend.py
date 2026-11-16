@@ -6,7 +6,7 @@ from pydantic import BaseModel, StringConstraints, field_validator
 from typing import Annotated
 from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession, async_sessionmaker
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
-from sqlalchemy import select
+from sqlalchemy import select, text
 import logging
 import structlog
 
@@ -98,6 +98,17 @@ async def create_todo(payload: TodoCreate):
         await session.commit()
         logger.info("Created new todo item", text=payload.text)
         return new_todo.text
+
+@app.get("/healthz")
+async def ready():
+    """Readiness: 200 only if the database answers a trivial query."""
+    try:
+        async with AsyncSessionLocal() as session:
+            await session.execute(text("SELECT 1"))
+    except Exception as e:
+        logger.warning("Readiness check failed", error=str(e))
+        raise HTTPException(status_code=503, detail="database unavailable")
+    return {"status": "ready"}
 
 @app.get("/")
 async def health():

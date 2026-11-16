@@ -64,6 +64,8 @@
     <button type="submit">Add Todo</button>
   </form>
 
+  <button type="button" id="break-button" class="secondary">Break app</button>
+
   <h2>These are your Todos</h2>
   <ul id="todo-list"></ul>
 
@@ -110,6 +112,10 @@
       } catch (err) {
         console.error("Failed to add todo:", err);
       }
+    });
+
+    document.getElementById('break-button').addEventListener('click', async () => {
+      await fetch('/break', { method: 'POST' });
     });
 
     loadTodos();

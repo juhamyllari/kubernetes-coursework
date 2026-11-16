@@ -14,6 +14,11 @@ IMAGE_PATH = os.path.join(STORAGE_DIR, IMAGE_FILENAME)
 IMAGE_SOURCE_URL = os.environ.get("IMAGE_SOURCE_URL")
 IMAGE_MAX_AGE = int(os.environ.get("IMAGE_MAX_AGE"))  # in seconds
 MAX_TODO_LENGTH = int(os.getenv("MAX_TODO_LENGTH"))
+BACKEND_URL = os.environ.get("BACKEND_URL", "http://todo-backend-svc")
+
+# Exercise 4.2: the "break app" button flips this flag; liveness then fails
+# and the kubelet restarts the container (which resets the flag).
+healthy = True
 
 app = FastAPI()
 templates = Jinja2Templates(directory="templates")
@@ -38,6 +43,29 @@ async def serve_image():
         with open(IMAGE_PATH, "rb") as f:
             return Response(content=f.read(), media_type="image/jpeg")
     return Response(status_code=404, content="No image cached yet.")
+
+@app.post("/break")
+def break_app():
+    global healthy
+    healthy = False
+    return {"status": "broken"}
+
+@app.get("/healthz")
+def liveness():
+    if not healthy:
+        return Response(status_code=500, content="unhealthy")
+    return {"status": "ok"}
+
+@app.get("/ready")
+def readiness():
+    """Ready only when the backend (and through it the database) is ready."""
+    try:
+        r = requests.get(BACKEND_URL + "/healthz", timeout=2)
+        if r.status_code == 200:
+            return {"status": "ready"}
+    except requests.RequestException:
+        pass
+    return Response(status_code=503, content="backend not ready")
 
 @app.get("/", response_class=HTMLResponse)
 def read_root(request: Request):
