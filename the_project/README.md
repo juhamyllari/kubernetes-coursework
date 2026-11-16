@@ -122,3 +122,6 @@ The database contents do not survive; restore the latest dump with `pg_restore`.
 App log in Google Cloud Logging showing the creation of a new todo:
 
 ![GKE log of a todo creation](gke-log-screenshot.png)
+
+### Prometheus (exercise 4.3)
+The query in exercise 4.3 is `count(kube_pod_info{namespace="prometheus", created_by_kind="StatefulSet"})`.
