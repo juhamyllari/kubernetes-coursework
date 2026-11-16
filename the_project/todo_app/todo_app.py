@@ -71,7 +71,7 @@ def readiness():
 def read_root(request: Request):
     if get_image_age() > IMAGE_MAX_AGE:
         fetch_new_image()
-    return templates.TemplateResponse(request, "index.html")
+    return templates.TemplateResponse(request, "index.html", {"healthy": healthy})
 
 if __name__ == "__main__":
 	port = FRONTEND_PORT

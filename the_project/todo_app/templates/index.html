@@ -64,7 +64,10 @@
     <button type="submit">Add Todo</button>
   </form>
 
-  <button type="button" id="break-button" class="secondary">Break app</button>
+  <button type="button" id="break-button" class="secondary" {% if not healthy %}hidden{% endif %}>Break app</button>
+  <article id="broken-msg" {% if healthy %}hidden{% endif %}>
+    The app is broken. Waiting for Kubernetes to restart it&hellip;
+  </article>
 
   <h2>These are your Todos</h2>
   <ul id="todo-list"></ul>
@@ -114,9 +117,32 @@
       }
     });
 
-    document.getElementById('break-button').addEventListener('click', async () => {
+    const breakButton = document.getElementById('break-button');
+    const brokenMsg = document.getElementById('broken-msg');
+
+    function showBroken() {
+      breakButton.hidden = true;
+      brokenMsg.hidden = false;
+      // Poll the liveness endpoint until the restarted container answers OK.
+      const timer = setInterval(async () => {
+        try {
+          const res = await fetch('/healthz', { cache: 'no-store' });
+          if (res.ok) {
+            clearInterval(timer);
+            breakButton.hidden = false;
+            brokenMsg.hidden = true;
+            loadTodos();
+          }
+        } catch (err) { /* app is down; keep waiting */ }
+      }, 2000);
+    }
+
+    breakButton.addEventListener('click', async () => {
       await fetch('/break', { method: 'POST' });
+      showBroken();
     });
+
+    if (brokenMsg.hidden === false) showBroken();
 
     loadTodos();
   </script>
