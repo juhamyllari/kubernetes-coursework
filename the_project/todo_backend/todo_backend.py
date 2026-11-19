@@ -2,11 +2,11 @@ import os
 import sys
 from contextlib import asynccontextmanager
 from fastapi import FastAPI, HTTPException, status
-from pydantic import BaseModel, StringConstraints, field_validator
+from pydantic import BaseModel, ConfigDict, StringConstraints, field_validator
 from typing import Annotated
 from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession, async_sessionmaker
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
-from sqlalchemy import select, text
+from sqlalchemy import select, text, false
 import logging
 import structlog
 
@@ -56,6 +56,7 @@ class TodoItem(Base):
     __tablename__ = "todos"
     id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
     text: Mapped[str] = mapped_column(nullable=False)
+    done: Mapped[bool] = mapped_column(default=False, server_default=false(), nullable=False)
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -84,11 +85,31 @@ class TodoCreate(BaseModel):
             )
         return v
 
-@app.get("/api/todos", response_model=list[str])
+class TodoOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    id: int
+    text: str
+    done: bool
+
+class TodoUpdate(BaseModel):
+    done: bool
+
+@app.get("/api/todos", response_model=list[TodoOut])
 async def get_todos():
     async with AsyncSessionLocal() as session:
-        result = await session.execute(select(TodoItem.text))
+        result = await session.execute(select(TodoItem).order_by(TodoItem.id))
         return list(result.scalars().all())
+
+@app.put("/api/todos/{todo_id}", response_model=TodoOut)
+async def update_todo(todo_id: int, payload: TodoUpdate):
+    async with AsyncSessionLocal() as session:
+        todo = await session.get(TodoItem, todo_id)
+        if todo is None:
+            raise HTTPException(status_code=404, detail="todo not found")
+        todo.done = payload.done
+        await session.commit()
+        logger.info("Updated todo item", id=todo_id, done=payload.done)
+        return todo
 
 @app.put("/api/todos", status_code=status.HTTP_201_CREATED, response_model=str)
 async def create_todo(payload: TodoCreate):

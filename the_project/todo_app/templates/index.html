@@ -31,6 +31,8 @@
       word-break: break-word;
       display: flex;
       align-items: center;
+      justify-content: space-between;
+      gap: 1rem;
       user-select: text;
       -webkit-user-select: text;
     }
@@ -41,6 +43,18 @@
       border-color: var(--pico-primary, #0172ad);
       box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
       background-color: var(--pico-card-background-color, #f8f9fa);
+    }
+
+    #todo-list li.done .todo-text {
+      text-decoration: line-through;
+      opacity: 0.6;
+    }
+
+    #todo-list li button {
+      width: auto;
+      margin: 0;
+      padding: 0.25rem 0.75rem;
+      flex-shrink: 0;
     }
 
     #todo-list li:active {
@@ -85,13 +99,34 @@
         todoList.innerHTML = '';
         todos.forEach(todo => {
           const li = document.createElement('li');
-          // li.setAttribute('role', 'button');
-          // li.setAttribute('tabindex', '0');
-          li.textContent = todo;
+          if (todo.done) li.className = 'done';
+          const span = document.createElement('span');
+          span.className = 'todo-text';
+          span.textContent = todo.text;
+          const btn = document.createElement('button');
+          btn.type = 'button';
+          btn.className = todo.done ? 'secondary outline' : '';
+          btn.textContent = todo.done ? 'Undo' : 'Done';
+          btn.addEventListener('click', () => setDone(todo.id, !todo.done));
+          li.append(span, btn);
           todoList.appendChild(li);
         });
       } catch (err) {
         console.error("Failed to load todos:", err);
+      }
+    }
+
+    // Mark a todo done (or undone) via PUT request
+    async function setDone(id, done) {
+      try {
+        const res = await fetch('/api/todos/' + id, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ done })
+        });
+        if (res.ok) loadTodos();
+      } catch (err) {
+        console.error("Failed to update todo:", err);
       }
     }
 
