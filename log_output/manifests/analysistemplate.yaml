@@ -1,0 +1,27 @@
+# Fails (and so aborts and rolls back the pingpong Rollout) if the summed CPU
+# usage rate of all containers in the namespace, averaged over 5 minutes,
+# rises above `threshold` cores.
+# The "too low" thereshold used in Ex. 4.4 was 0.0001 and was
+# confirmed to stop the Rollout.
+apiVersion: argoproj.io/v1alpha1
+kind: AnalysisTemplate
+metadata:
+  name: namespace-cpu-rate
+  namespace: exercises
+spec:
+  args:
+    - name: namespace
+    - name: threshold
+      value: "0.05"  # cores; idle usage of the namespace is ~0.01
+  metrics:
+    - name: namespace-cpu-rate
+      initialDelay: 1m
+      interval: 1m
+      count: 5
+      failureLimit: 0
+      successCondition: result <{{args.threshold}}
+      provider:
+        prometheus:
+          address: http://prometheus-server.prometheus.svc.cluster.local:80
+          query: |
+            scalar(sum(rate(container_cpu_usage_seconds_total{namespace="{{args.namespace}}", container!=""}[5m])))

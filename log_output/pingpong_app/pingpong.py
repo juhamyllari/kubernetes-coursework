@@ -90,7 +90,7 @@ async def increment_counter():
             WHERE id = 1 
             RETURNING val;
         """)
-        return {"message": "pong", "counter": val}
+        return {"message": "pong (this is a new version)", "counter": val}
 
 @app.get("/pings")
 async def get_counter():

@@ -80,6 +80,14 @@ jobs:
       - name: Set up Kustomize
         uses: imranismail/setup-kustomize@v3
 
+      # Same version as the controller installed on the cluster. Its `status`
+      # command exits non-zero if the rollout is aborted (failed analysis).
+      - name: Install kubectl-argo-rollouts
+        run: |
+          curl -fsSL -o kubectl-argo-rollouts \
+            https://github.com/argoproj/argo-rollouts/releases/download/v1.10.2/kubectl-argo-rollouts-linux-amd64
+          sudo install -m 0755 kubectl-argo-rollouts /usr/local/bin/kubectl-argo-rollouts
+
       - name: Write Postgres secret env file
         working-directory: ${{ env.APP_DIR }}
         env:
@@ -96,6 +104,10 @@ jobs:
           kustomize edit set image stamppong="$IMAGE_BASE/stamppong:$IMAGE_TAG"
           kustomize edit set image pingpong="$IMAGE_BASE/pingpong:$IMAGE_TAG"
           kustomize build . | kubectl apply -f -
+          # pingpong used to be a Deployment; remove it from namespaces deployed
+          # before the switch to a Rollout (no-op otherwise).
+          kubectl -n "$NAMESPACE" delete deployment pingpong-deployment --ignore-not-found
           kubectl -n "$NAMESPACE" rollout status statefulset/postgres --timeout=5m
-          kubectl -n "$NAMESPACE" rollout status deployment/pingpong-deployment --timeout=5m
+          # Canary: 5 min pause with the CPU analysis running; fails the job if aborted.
+          kubectl argo rollouts status pingpong-rollout -n "$NAMESPACE" --timeout 10m
           kubectl -n "$NAMESPACE" rollout status deployment/stamppong-deployment --timeout=5m

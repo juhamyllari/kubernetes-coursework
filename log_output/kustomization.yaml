@@ -1,10 +1,15 @@
 apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
 namespace: exercises
+configurations:
+  - kustomizeconfig.yaml
+
 resources:
   - manifests/namespace.yaml
   - manifests/app-config.yaml
   - manifests/deployment.yaml
+  - manifests/rollout.yaml
+  - manifests/analysistemplate.yaml
   - manifests/gateway.yaml
   - manifests/route.yaml
   - manifests/postgres-statefulset.yaml
@@ -28,10 +33,10 @@ secretGenerator:
 images:
   - name: stamppong
     newName: juhamyllari/stamppong
-    newTag: v3.2.0
+    newTag: v4.4.0
   - name: pingpong
     newName: juhamyllari/pingpong
-    newTag: v3.4.0
+    newTag: v4.4.1
 
 # Marks the Namespace as created by the branch pipeline; the cleanup workflow
 # only deletes namespaces carrying this label.

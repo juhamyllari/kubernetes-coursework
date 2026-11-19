@@ -1,0 +1,41 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Rollout
+metadata:
+  name: pingpong-rollout
+  namespace: exercises
+spec:
+  replicas: 1
+  strategy:
+    canary:
+      analysis:
+        templates:
+          - templateName: namespace-cpu-rate
+        args:
+          - name: namespace
+            valueFrom:
+              fieldRef:
+                fieldPath: metadata.namespace
+      steps:
+        - setWeight: 50
+        - pause: {duration: 5m}
+        - setWeight: 100
+  selector:
+    matchLabels:
+      app: pingpong
+  template:
+    metadata:
+      labels:
+        app: pingpong
+    spec:
+      containers:
+      - name: pingpong
+        image: pingpong
+        envFrom:
+        - secretRef:
+            name: postgres-secret
+        readinessProbe:
+          httpGet:
+            path: /ready
+            port: 8000
+          periodSeconds: 5
+          failureThreshold: 2
