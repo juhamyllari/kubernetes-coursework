@@ -59,6 +59,25 @@ Namespaces are not yet removed automatically in exercise 3.7 when a branch is de
 Deleting a branch triggers `.github/workflows/cleanup.yaml`, which deletes the branch's namespace.
 Only namespaces labelled `deployed-by=branch-pipeline` (set by a Kustomize patch) are deleted, and `project` is never deleted.
 
+## Broadcaster (exercise 4.6)
+The backend publishes an event (`created` or `updated`, plus the todo id, never the todo text) to NATS on every save or update.
+The `broadcaster` Deployment (6 replicas) subscribes in a NATS queue group, so each event is handled by exactly one replica,
+and forwards a fixed-vocabulary message such as `A todo was created (id 7)` to a webhook. Delivery is at-most-once.
+`nats.yaml`, `broadcaster.yaml` and `webhook-sink.yaml` are part of the kustomization;
+the sink is an echo server that logs what it receives, a stand-in for an external service.
+
+The webhook target comes from the `broadcaster-secret` Secret, which Kustomize generates from a gitignored `broadcaster-secret.env`:
+```
+WEBHOOK_URL=http://webhook-sink-svc/
+WEBHOOK_FORMAT=generic
+```
+`WEBHOOK_FORMAT` is `generic` (`{"user", "message"}`) or `discord` (`{"username", "content"}`).
+For a local `kubectl apply -k .`, create the file yourself with the values above (this targets the in-cluster sink).
+In CI the file is written from the `DISCORD_WEBHOOK_URL` GitHub secret, with the format set to `discord`.
+The URL is a credential, so keep it out of the repo.
+
+Watch the sink: `kubectl -n project logs -f deploy/webhook-sink`.
+
 ## Exercise 3.9: DBaaS vs DIY
 When deploying an app to Google Cloud, we have a choice between using a managed database service (DBaaS) or deploying our own database (DIY). The DIY option is cheaper and keeps the database under the team's control. DIY also offers a portability benefit, as the app setup is defined in its entirety by a collection of Kubernetes manifests and can be deployed to any Kubernetes cluster. However, DIY requires more work to set up and maintain, and the team must have the necessary expertise to do so. No automated backups are provided; the team must implement their own backup solution.
 
