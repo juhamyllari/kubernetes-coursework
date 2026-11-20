@@ -25,7 +25,8 @@ spec:
         env:
           - name: NATS_URL
             value: nats://nats-svc:4222
-          # Defaults to the in-cluster sink below; point at a real chat
-          # webhook to forward outside the cluster.
-          - name: WEBHOOK_URL
-            value: http://webhook-sink-svc/
+        # WEBHOOK_URL and WEBHOOK_FORMAT come from the generated secret
+        # (see kustomization.yaml).
+        envFrom:
+          - secretRef:
+              name: broadcaster-secret

@@ -3,4 +3,5 @@ __pycache__/
 .vscode/
 the_project/postgres-secret.env
 the_project/backup-config.env
+the_project/broadcaster-secret.env
 log_output/postgres-secret.env

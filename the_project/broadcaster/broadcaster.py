@@ -26,7 +26,10 @@ SUBJECT = os.environ.get("NATS_SUBJECT", "todos.events")
 # All replicas join the same queue group, so NATS delivers each message to
 # exactly one of them. This is what prevents duplicates when scaled.
 QUEUE = os.environ.get("NATS_QUEUE", "broadcaster")
+# The URL may be a credential (e.g. a Discord webhook): never log it.
 WEBHOOK_URL = os.environ["WEBHOOK_URL"]
+# "generic": {"user", "message"}; "discord": {"username", "content"}.
+WEBHOOK_FORMAT = os.environ.get("WEBHOOK_FORMAT", "generic")
 
 # Hygiene: the message text is built here from a fixed vocabulary. Nothing
 # from the incoming payload is forwarded except the event type (checked
@@ -46,6 +49,8 @@ def build_payload(raw: bytes) -> dict | None:
         return None
     if isinstance(todo_id, int) and not isinstance(todo_id, bool):
         text += f" (id {todo_id})"
+    if WEBHOOK_FORMAT == "discord":
+        return {"username": "todo-bot", "content": text}
     return {"user": "bot", "message": text}
 
 
@@ -60,10 +65,12 @@ async def main():
         try:
             resp = await http.post(WEBHOOK_URL, json=payload)
             resp.raise_for_status()
-            logger.info("Forwarded", message=payload["message"])
+            logger.info("Forwarded", message=payload.get("message") or payload["content"])
         except httpx.HTTPError as e:
             # At-most-once: a lost message is acceptable, a duplicate is not.
-            logger.warning("Forwarding failed", error=str(e))
+            # str(e) can embed the URL, so log only the status or error type.
+            status = e.response.status_code if isinstance(e, httpx.HTTPStatusError) else None
+            logger.warning("Forwarding failed", status=status, error=type(e).__name__)
 
     nc = await nats.connect(NATS_URL, max_reconnect_attempts=-1)
     await nc.subscribe(SUBJECT, queue=QUEUE, cb=handler)

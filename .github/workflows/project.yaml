@@ -104,6 +104,15 @@ jobs:
           test -n "$BACKUP_BUCKET" || { echo "BACKUP_BUCKET secret is not set"; exit 1; }
           printf 'BACKUP_BUCKET=%s\n' "$BACKUP_BUCKET" > backup-config.env
 
+      - name: Write broadcaster secret env file
+        working-directory: ${{ env.APP_DIR }}
+        env:
+          DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
+        run: |
+          test -n "$DISCORD_WEBHOOK_URL" || { echo "DISCORD_WEBHOOK_URL secret is not set"; exit 1; }
+          umask 077
+          printf 'WEBHOOK_URL=%s\nWEBHOOK_FORMAT=discord\n' "$DISCORD_WEBHOOK_URL" > broadcaster-secret.env
+
       - name: Deploy
         working-directory: ${{ env.APP_DIR }}
         run: |-

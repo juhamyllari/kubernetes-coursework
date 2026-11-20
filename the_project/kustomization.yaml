@@ -38,6 +38,14 @@ secretGenerator:
   - name: postgres-secret
     envs:
       - postgres-secret.env
+  # broadcaster-secret.env (gitignored) holds WEBHOOK_URL and WEBHOOK_FORMAT
+  # (generic|discord). For the in-cluster sink:
+  #   WEBHOOK_URL=http://webhook-sink-svc/
+  #   WEBHOOK_FORMAT=generic
+  # CI writes it from the DISCORD_WEBHOOK_URL GitHub secret.
+  - name: broadcaster-secret
+    envs:
+      - broadcaster-secret.env
 
 # The backup bucket name is not committed either. backup-config.env (gitignored)
 # must contain a line BACKUP_BUCKET=<bucket name, without gs://>; CI writes it
