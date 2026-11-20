@@ -3,15 +3,15 @@ kind: Kustomization
 namespace: exercises
 
 resources:
-  - manifests/namespace.yaml
-  - manifests/app-config.yaml
-  - manifests/deployment.yaml
-  - manifests/rollout.yaml
-  - manifests/gateway.yaml
-  - manifests/route.yaml
-  - manifests/postgres-statefulset.yaml
-  - manifests/service.yaml
-  - manifests/healthcheck.yaml
+- manifests/namespace.yaml
+- manifests/app-config.yaml
+- manifests/deployment.yaml
+- manifests/rollout.yaml
+- manifests/gateway.yaml
+- manifests/route.yaml
+- manifests/postgres-statefulset.yaml
+- manifests/service.yaml
+- manifests/healthcheck.yaml
 
 # The Secret "postgres-secret" (POSTGRES_DB, POSTGRES_USER, POSTGRES_PASSWORD)
 # is not in git. It is created once by hand in the namespace and Argo CD does
@@ -21,9 +21,9 @@ resources:
 # manifests. The CI workflow rewrites newTag (via `kustomize edit set image`)
 # and commits the result; Argo CD then deploys it.
 images:
-  - name: stamppong
-    newName: europe-north1-docker.pkg.dev/dwk-gke-509508/dwk-repo/stamppong
-    newTag: initial
-  - name: pingpong
-    newName: europe-north1-docker.pkg.dev/dwk-gke-509508/dwk-repo/pingpong
-    newTag: initial
+- name: pingpong
+  newName: europe-north1-docker.pkg.dev/dwk-gke-509508/dwk-repo/pingpong
+  newTag: c663e955f8e1a0c5807672d9249a8c5e67c8b003
+- name: stamppong
+  newName: europe-north1-docker.pkg.dev/dwk-gke-509508/dwk-repo/stamppong
+  newTag: c663e955f8e1a0c5807672d9249a8c5e67c8b003
