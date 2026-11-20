@@ -9,13 +9,11 @@ on:
       - '.github/workflows/log_output.yaml'
 
 permissions:
-  contents: read
+  contents: write
   id-token: write
 
 env:
     PROJECT_ID: ${{ secrets.GKE_PROJECT }}
-    GKE_CLUSTER: dwk-cluster
-    GKE_ZONE: europe-north1-b
     REGISTRY: europe-north1-docker.pkg.dev
     REGISTRY_LOCATION: europe-north1
     REPOSITORY: dwk-repo
@@ -25,7 +23,7 @@ env:
 
 jobs:
   build-publish-deploy:
-    name: Build, Publish and Deploy
+    name: Build, Publish and Update Manifests
     runs-on: ubuntu-latest
     environment: GKE_PROJECT
 
@@ -48,13 +46,6 @@ jobs:
       - name: 'Configure Docker'
         run: gcloud --quiet auth configure-docker $REGISTRY
 
-      - name: 'Get GKE credentials'
-        uses: 'google-github-actions/get-gke-credentials@v3'
-        with:
-          cluster_name: '${{ env.GKE_CLUSTER }}'
-          project_id: '${{ env.PROJECT_ID }}'
-          location: '${{ env.GKE_ZONE }}'
-
         # e.g. europe-north1-docker.pkg.dev/my-project/my-repo
       - name: Compute image base path
         run: echo "IMAGE_BASE=${REGISTRY}/${PROJECT_ID}/${REPOSITORY}" >> "$GITHUB_ENV"
@@ -69,45 +60,21 @@ jobs:
           docker build --tag "$IMAGE_BASE/pingpong:$IMAGE_TAG" "$APP_DIR/pingpong_app"
           docker push "$IMAGE_BASE/pingpong:$IMAGE_TAG"
 
-      # main deploys to "exercises"; any other branch deploys to "exercises-<branch>"
-      # so it can't collide with the_project's branch namespaces (named after the
-      # branch). Assumes the result is a valid namespace name.
-      - name: Compute namespace
-        run: |
-          if [ "$BRANCH" = "main" ]; then NS=exercises; else NS="exercises-$BRANCH"; fi
-          echo "NAMESPACE=$NS" >> "$GITHUB_ENV"
-
+      # GitOps: CI only records the new image tags in git. Argo CD watches
+      # log_output/ on main and deploys the change to the cluster.
       - name: Set up Kustomize
+        if: github.ref == 'refs/heads/main'
         uses: imranismail/setup-kustomize@v3
 
-      # Same version as the controller installed on the cluster. Its `status`
-      # command exits non-zero if the rollout is aborted (failed analysis).
-      - name: Install kubectl-argo-rollouts
-        run: |
-          curl -fsSL -o kubectl-argo-rollouts \
-            https://github.com/argoproj/argo-rollouts/releases/download/v1.10.2/kubectl-argo-rollouts-linux-amd64
-          sudo install -m 0755 kubectl-argo-rollouts /usr/local/bin/kubectl-argo-rollouts
-
-      - name: Write Postgres secret env file
-        working-directory: ${{ env.APP_DIR }}
-        env:
-          POSTGRES_PASSWORD: ${{ secrets.LOG_OUTPUT_POSTGRES_PASSWORD }}
-        run: |
-          test -n "$POSTGRES_PASSWORD" || { echo "LOG_OUTPUT_POSTGRES_PASSWORD secret is not set"; exit 1; }
-          umask 077
-          printf 'POSTGRES_PASSWORD=%s\n' "$POSTGRES_PASSWORD" > postgres-secret.env
-
-      - name: Deploy
+      - name: Commit new image tags
+        if: github.ref == 'refs/heads/main'
         working-directory: ${{ env.APP_DIR }}
         run: |-
-          kustomize edit set namespace "$NAMESPACE"
           kustomize edit set image stamppong="$IMAGE_BASE/stamppong:$IMAGE_TAG"
           kustomize edit set image pingpong="$IMAGE_BASE/pingpong:$IMAGE_TAG"
-          kustomize build . | kubectl apply -f -
-          # pingpong used to be a Deployment; remove it from namespaces deployed
-          # before the switch to a Rollout (no-op otherwise).
-          kubectl -n "$NAMESPACE" delete deployment pingpong-deployment --ignore-not-found
-          kubectl -n "$NAMESPACE" rollout status statefulset/postgres --timeout=5m
-          # Canary: 5 min pause with the CPU analysis running; fails the job if aborted.
-          kubectl argo rollouts status pingpong-rollout -n "$NAMESPACE" --timeout 10m
-          kubectl -n "$NAMESPACE" rollout status deployment/stamppong-deployment --timeout=5m
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add kustomization.yaml
+          git commit -m "Deploy log output $IMAGE_TAG [skip ci]"
+          git pull --rebase origin main
+          git push origin HEAD:main

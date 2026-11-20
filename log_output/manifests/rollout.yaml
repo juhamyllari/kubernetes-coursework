@@ -7,14 +7,6 @@ spec:
   replicas: 1
   strategy:
     canary:
-      analysis:
-        templates:
-          - templateName: namespace-cpu-rate
-        args:
-          - name: namespace
-            valueFrom:
-              fieldRef:
-                fieldPath: metadata.namespace
       steps:
         - setWeight: 50
         - pause: {duration: 5m}

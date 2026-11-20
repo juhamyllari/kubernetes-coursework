@@ -1,0 +1,22 @@
+# Argo CD Application for the log output apps. Applied once by hand
+# (kubectl apply -f); after that Argo CD tracks log_output/ on main.
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: log-output
+  namespace: argocd
+spec:
+  project: default
+  source:
+    repoURL: https://github.com/juhamyllari/kubernetes-coursework.git
+    targetRevision: main
+    path: log_output
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: exercises
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
