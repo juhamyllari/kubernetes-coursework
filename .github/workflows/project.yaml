@@ -72,6 +72,11 @@ jobs:
           docker build --tag "$IMAGE_BASE/frontend:$IMAGE_TAG" "$APP_DIR/todo_app"
           docker push "$IMAGE_BASE/frontend:$IMAGE_TAG"
 
+      - name: Build and push broadcaster
+        run: |
+          docker build --tag "$IMAGE_BASE/broadcaster:$IMAGE_TAG" "$APP_DIR/broadcaster"
+          docker push "$IMAGE_BASE/broadcaster:$IMAGE_TAG"
+
       # main deploys to "project"; any other branch deploys to a namespace
       # named after the branch (assumed to be a valid namespace name).
       - name: Compute namespace
@@ -105,6 +110,8 @@ jobs:
           kustomize edit set namespace "$NAMESPACE"
           kustomize edit set image todo-backend="$IMAGE_BASE/backend:$IMAGE_TAG"
           kustomize edit set image todo-frontend="$IMAGE_BASE/frontend:$IMAGE_TAG"
+          kustomize edit set image broadcaster="$IMAGE_BASE/broadcaster:$IMAGE_TAG"
           kustomize build . | kubectl apply -f -
           kubectl -n "$NAMESPACE" rollout status deployment/todo-backend-dep --timeout=5m
           kubectl -n "$NAMESPACE" rollout status deployment/todo-dep --timeout=5m
+          kubectl -n "$NAMESPACE" rollout status deployment/broadcaster-dep --timeout=5m

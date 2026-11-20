@@ -7,8 +7,10 @@ from typing import Annotated
 from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession, async_sessionmaker
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 from sqlalchemy import select, text, false
+import json
 import logging
 import structlog
+import nats
 
 # Plain message only, to stdout: Cloud Logging parses single-line JSON into
 # jsonPayload and stderr output would otherwise be labelled ERROR.
@@ -58,11 +60,30 @@ class TodoItem(Base):
     text: Mapped[str] = mapped_column(nullable=False)
     done: Mapped[bool] = mapped_column(default=False, server_default=false(), nullable=False)
 
+NATS_URL = os.environ.get("NATS_URL")
+NATS_SUBJECT = os.environ.get("NATS_SUBJECT", "todos.events")
+nats_client = None
+
+async def publish_event(event: str, todo_id: int):
+    """Best-effort status event for the broadcaster. Carries only the event
+    type and the todo id, never the todo text. Failures must not break the API."""
+    global nats_client
+    if not NATS_URL:
+        return
+    try:
+        if nats_client is None or nats_client.is_closed:
+            nats_client = await nats.connect(NATS_URL, connect_timeout=2, max_reconnect_attempts=-1)
+        await nats_client.publish(NATS_SUBJECT, json.dumps({"event": event, "id": todo_id}).encode())
+    except Exception as e:
+        logger.warning("Publishing event failed", error=str(e))
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
     yield
+    if nats_client is not None and not nats_client.is_closed:
+        await nats_client.drain()
 
 app = FastAPI(lifespan=lifespan)
 
@@ -109,6 +130,7 @@ async def update_todo(todo_id: int, payload: TodoUpdate):
         todo.done = payload.done
         await session.commit()
         logger.info("Updated todo item", id=todo_id, done=payload.done)
+        await publish_event("updated", todo_id)
         return todo
 
 @app.put("/api/todos", status_code=status.HTTP_201_CREATED, response_model=str)
@@ -118,6 +140,7 @@ async def create_todo(payload: TodoCreate):
         session.add(new_todo)
         await session.commit()
         logger.info("Created new todo item", text=payload.text)
+        await publish_event("created", new_todo.id)
         return new_todo.text
 
 @app.get("/healthz")

@@ -10,6 +10,9 @@ resources:
   - manifests/persistentvolumeclaim.yaml
   - manifests/postgres-config.yaml
   - manifests/postgres-statefulset.yaml
+  - manifests/nats.yaml
+  - manifests/broadcaster.yaml
+  - manifests/webhook-sink.yaml
   - manifests/service.yaml
   - manifests/hpa.yaml
   - manifests/cronjob.yaml
@@ -55,3 +58,6 @@ images:
   - name: todo-backend
     newName: juhamyllari/todo-backend
     newTag: v3.5.2
+  - name: broadcaster
+    newName: juhamyllari/broadcaster
+    newTag: v1.0.0

@@ -125,6 +125,8 @@ spec:
               configMapKeyRef:
                 name: log-configmap
                 key: MAX_TODO_LENGTH
+          - name: NATS_URL
+            value: nats://nats-svc:4222
         # Ready only when the database answers; failing leaves the pod running
         # but removes it from the Service.
         readinessProbe:
