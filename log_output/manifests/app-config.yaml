@@ -6,4 +6,4 @@ metadata:
 data:
   MESSAGE: "Hello, World!"
   information.txt: |
-    Greetings! This text is from a file.
+    Greetings! This text comes from a file.
