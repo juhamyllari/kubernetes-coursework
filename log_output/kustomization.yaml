@@ -23,7 +23,7 @@ resources:
 images:
 - name: pingpong
   newName: europe-north1-docker.pkg.dev/dwk-gke-509508/dwk-repo/pingpong
-  newTag: c663e955f8e1a0c5807672d9249a8c5e67c8b003
+  newTag: 28dd67ceae89bd33f77809d7df68add24e519670
 - name: stamppong
   newName: europe-north1-docker.pkg.dev/dwk-gke-509508/dwk-repo/stamppong
-  newTag: c663e955f8e1a0c5807672d9249a8c5e67c8b003
+  newTag: 28dd67ceae89bd33f77809d7df68add24e519670
