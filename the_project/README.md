@@ -1,5 +1,8 @@
 # The "Project" app (a.k.a. the "Todo" app)
 
+## GitOps with Argo CD (exercise 4.8+)
+From exercise 4.8 onwards, the project is deployed by Argo CD; a push to the repo triggers the deployment.
+
 ## Prometheus (exercise 4.3)
 The query in exercise 4.3 is `count(kube_pod_info{namespace="prometheus", created_by_kind="StatefulSet"})`. (This entry is on the top of the README only for the 4.3 release.)
 
