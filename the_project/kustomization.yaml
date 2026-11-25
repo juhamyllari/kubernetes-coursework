@@ -2,22 +2,22 @@ apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
 namespace: project
 resources:
-  - manifests/namespace.yaml
-  - manifests/app-config.yaml
-  - manifests/deployment.yaml
-  - manifests/gateway.yaml
-  - manifests/route.yaml
-  - manifests/persistentvolumeclaim.yaml
-  - manifests/postgres-config.yaml
-  - manifests/postgres-statefulset.yaml
-  - manifests/nats.yaml
-  - manifests/broadcaster.yaml
-  - manifests/webhook-sink.yaml
-  - manifests/service.yaml
-  - manifests/hpa.yaml
-  - manifests/cronjob.yaml
-  - manifests/backup-serviceaccount.yaml
-  - manifests/backup-cronjob.yaml
+- manifests/namespace.yaml
+- manifests/app-config.yaml
+- manifests/deployment.yaml
+- manifests/gateway.yaml
+- manifests/route.yaml
+- manifests/persistentvolumeclaim.yaml
+- manifests/postgres-config.yaml
+- manifests/postgres-statefulset.yaml
+- manifests/nats.yaml
+- manifests/broadcaster.yaml
+- manifests/webhook-sink.yaml
+- manifests/service.yaml
+- manifests/hpa.yaml
+- manifests/cronjob.yaml
+- manifests/backup-serviceaccount.yaml
+- manifests/backup-cronjob.yaml
 
 # Secrets and config are not in git. Argo CD deploys this directory straight from
 # main, so these are created by hand in the "project" namespace (see
@@ -31,12 +31,12 @@ resources:
 # here are the initial values (Docker Hub); the CI workflow rewrites them with
 # `kustomize edit set image` and commits the result to main; Argo CD then deploys it.
 images:
-  - name: todo-frontend
-    newName: juhamyllari/todo-app
-    newTag: v2.10.0
-  - name: todo-backend
-    newName: juhamyllari/todo-backend
-    newTag: v3.5.2
-  - name: broadcaster
-    newName: juhamyllari/broadcaster
-    newTag: v1.0.0
+- name: broadcaster
+  newName: europe-north1-docker.pkg.dev/dwk-gke-509508/dwk-repo/broadcaster
+  newTag: edb62f3193f502d9a5cfbdfd272dfd0df98efec9
+- name: todo-backend
+  newName: europe-north1-docker.pkg.dev/dwk-gke-509508/dwk-repo/backend
+  newTag: edb62f3193f502d9a5cfbdfd272dfd0df98efec9
+- name: todo-frontend
+  newName: europe-north1-docker.pkg.dev/dwk-gke-509508/dwk-repo/frontend
+  newTag: edb62f3193f502d9a5cfbdfd272dfd0df98efec9
