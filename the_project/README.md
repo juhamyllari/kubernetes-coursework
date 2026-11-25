@@ -109,7 +109,7 @@ The DBaaS option is easier to set up and maintain, and backups can be handled au
 
 
 ## Exercise 3.10: Daily database backups to Cloud Storage
-`manifests/backup-cronjob.yaml` runs daily at 03:00 UTC. An init container (`postgres:16-alpine`) runs `pg_dump -Fc` into an `emptyDir`,
+`overlays/production/backup-cronjob.yaml` runs daily (production only; staging is not backed up) at 03:00 UTC. An init container (`postgres:16-alpine`) runs `pg_dump -Fc` into an `emptyDir`,
 then the main container (`google/cloud-sdk`) uploads the file to `gs://<bucket>/<namespace>/tododb-<timestamp>.pgdump`.
 The upload is authorised with Workload Identity Federation for GKE: the pod runs as the Kubernetes ServiceAccount `db-backup`,
 which is granted write access to the bucket directly in IAM. No key file is stored.
@@ -132,10 +132,10 @@ gcloud storage buckets add-iam-policy-binding gs://$BUCKET \
   --role=roles/storage.objectUser \
   --member="principal://iam.googleapis.com/projects/$PROJECT_NUMBER/locations/global/workloadIdentityPools/$PROJECT_ID.svc.id.goog/subject/ns/production/sa/db-backup"
 ```
-The IAM binding names a namespace, so only the `production` namespace can upload. Backup jobs in branch namespaces fail with a permission error unless an equivalent binding is added for them.
-The bucket name is not committed. Kustomize generates the `backup-config` ConfigMap from a gitignored `backup-config.env` file
-containing `BACKUP_BUCKET=<bucket name>` (no `gs://`). In CI the file is written from the `BACKUP_BUCKET` GitHub secret.
-For a local `kubectl apply -k .`, create the file yourself.
+The IAM binding names a namespace, so only the `production` namespace can upload. Another namespace would need its own binding.
+The bucket name is not committed. The `backup-config` ConfigMap is created by hand in the `production` namespace
+(`kubectl -n production create configmap backup-config --from-literal=BACKUP_BUCKET=<bucket name>`, no `gs://`);
+`scripts/create-cluster.sh` does it.
 
 Test it without waiting for the schedule:
 ```bash
