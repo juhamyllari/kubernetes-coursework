@@ -9,13 +9,11 @@ on:
       - '.github/workflows/project.yaml'
 
 permissions:
-  contents: read
+  contents: write
   id-token: write
 
 env:
     PROJECT_ID: ${{ secrets.GKE_PROJECT }}
-    GKE_CLUSTER: dwk-cluster
-    GKE_ZONE: europe-north1-b
     REGISTRY: europe-north1-docker.pkg.dev
     REGISTRY_LOCATION: europe-north1
     REPOSITORY: dwk-repo
@@ -25,7 +23,7 @@ env:
   
 jobs:
   build-publish-deploy:
-    name: Build, Publish and Deploy
+    name: Build, Publish and Update Manifests
     runs-on: ubuntu-latest
     environment: GKE_PROJECT
 
@@ -51,13 +49,6 @@ jobs:
       - name: 'Configure Docker'
         run: gcloud --quiet auth configure-docker $REGISTRY
 
-      - name: 'Get GKE credentials'
-        uses: 'google-github-actions/get-gke-credentials@v3'
-        with:
-          cluster_name: '${{ env.GKE_CLUSTER }}'
-          project_id: '${{ env.PROJECT_ID }}'
-          location: '${{ env.GKE_ZONE }}'
-      
         # e.g. europe-north1-docker.pkg.dev/my-project/my-repo
       - name: Compute image base path
         run: echo "IMAGE_BASE=${REGISTRY}/${PROJECT_ID}/${REPOSITORY}" >> "$GITHUB_ENV"
@@ -77,50 +68,22 @@ jobs:
           docker build --tag "$IMAGE_BASE/broadcaster:$IMAGE_TAG" "$APP_DIR/broadcaster"
           docker push "$IMAGE_BASE/broadcaster:$IMAGE_TAG"
 
-      # main deploys to "project"; any other branch deploys to a namespace
-      # named after the branch (assumed to be a valid namespace name).
-      - name: Compute namespace
-        run: |
-          if [ "$BRANCH" = "main" ]; then NS=project; else NS="$BRANCH"; fi
-          echo "NAMESPACE=$NS" >> "$GITHUB_ENV"
-
+      # GitOps: CI only records the new image tags in git. Argo CD watches
+      # the_project/ on main and deploys the change to the cluster.
       - name: Set up Kustomize
+        if: github.ref == 'refs/heads/main'
         uses: imranismail/setup-kustomize@v3
 
-      - name: Write Postgres secret env file
-        working-directory: ${{ env.APP_DIR }}
-        env:
-          POSTGRES_PASSWORD: ${{ secrets.POSTGRES_PASSWORD }}
-        run: |
-          test -n "$POSTGRES_PASSWORD" || { echo "POSTGRES_PASSWORD secret is not set"; exit 1; }
-          umask 077
-          printf 'POSTGRES_PASSWORD=%s\n' "$POSTGRES_PASSWORD" > postgres-secret.env
-
-      - name: Write backup config env file
-        working-directory: ${{ env.APP_DIR }}
-        env:
-          BACKUP_BUCKET: ${{ secrets.BACKUP_BUCKET }}
-        run: |
-          test -n "$BACKUP_BUCKET" || { echo "BACKUP_BUCKET secret is not set"; exit 1; }
-          printf 'BACKUP_BUCKET=%s\n' "$BACKUP_BUCKET" > backup-config.env
-
-      - name: Write broadcaster secret env file
-        working-directory: ${{ env.APP_DIR }}
-        env:
-          DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
-        run: |
-          test -n "$DISCORD_WEBHOOK_URL" || { echo "DISCORD_WEBHOOK_URL secret is not set"; exit 1; }
-          umask 077
-          printf 'WEBHOOK_URL=%s\nWEBHOOK_FORMAT=discord\n' "$DISCORD_WEBHOOK_URL" > broadcaster-secret.env
-
-      - name: Deploy
+      - name: Commit new image tags
+        if: github.ref == 'refs/heads/main'
         working-directory: ${{ env.APP_DIR }}
         run: |-
-          kustomize edit set namespace "$NAMESPACE"
           kustomize edit set image todo-backend="$IMAGE_BASE/backend:$IMAGE_TAG"
           kustomize edit set image todo-frontend="$IMAGE_BASE/frontend:$IMAGE_TAG"
           kustomize edit set image broadcaster="$IMAGE_BASE/broadcaster:$IMAGE_TAG"
-          kustomize build . | kubectl apply -f -
-          kubectl -n "$NAMESPACE" rollout status deployment/todo-backend-dep --timeout=5m
-          kubectl -n "$NAMESPACE" rollout status deployment/todo-dep --timeout=5m
-          kubectl -n "$NAMESPACE" rollout status deployment/broadcaster-dep --timeout=5m
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add kustomization.yaml
+          git commit -m "Deploy project $IMAGE_TAG [skip ci]"
+          git pull --rebase origin main
+          git push origin HEAD:main

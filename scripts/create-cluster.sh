@@ -1,9 +1,14 @@
 #!/usr/bin/env bash
 # Recreates the GKE cluster and bootstraps GitOps. After this finishes, Argo CD
-# deploys log_output/ from git on its own.
+# deploys log_output/ and the_project/ from git on its own.
 #
-# Usage: POSTGRES_PASSWORD=... scripts/create-cluster.sh
-# (if POSTGRES_PASSWORD is unset, you are prompted for it)
+# Usage: scripts/create-cluster.sh
+# Each value is taken from the environment variable if set, otherwise from a
+# file (just the value) in $DWK_CONFIG_DIR (default ~/.config/dwk):
+#   POSTGRES_PASSWORD  postgres-password  (prompted for if neither is present)
+#   WEBHOOK_URL        webhook-url        (Discord webhook, or http://webhook-sink-svc/)
+#   BACKUP_BUCKET      backup-bucket      (bucket name without gs://)
+# WEBHOOK_FORMAT is an env var only and defaults to discord (or generic).
 set -euo pipefail
 
 CLUSTER=${CLUSTER:-dwk-cluster}
@@ -14,10 +19,32 @@ ROLLOUTS_VERSION=${ROLLOUTS_VERSION:-v1.10.2}
 NAMESPACE=exercises
 
 : "${PROJECT_ID:?set PROJECT_ID or run gcloud config set project}"
+
+CONFIG_DIR=${DWK_CONFIG_DIR:-$HOME/.config/dwk}
+
+# load_value VAR FILE: if VAR is unset or empty, read it from $CONFIG_DIR/FILE.
+load_value() {
+  local var=$1 file="$CONFIG_DIR/$2"
+  [ -z "${!var:-}" ] || return 0
+  [ -f "$file" ] || return 0
+  if [ -n "$(find "$file" -perm /077 2>/dev/null)" ]; then
+    echo "warning: $file is accessible to others; consider chmod 600" >&2
+  fi
+  printf -v "$var" '%s' "$(<"$file")"
+}
+
+load_value POSTGRES_PASSWORD postgres-password
+load_value WEBHOOK_URL webhook-url
+load_value BACKUP_BUCKET backup-bucket
+
 if [ -z "${POSTGRES_PASSWORD:-}" ]; then
   read -rsp "Postgres password: " POSTGRES_PASSWORD; echo
 fi
 [ -n "$POSTGRES_PASSWORD" ] || { echo "empty password" >&2; exit 1; }
+
+: "${BACKUP_BUCKET:?set BACKUP_BUCKET or create $CONFIG_DIR/backup-bucket (bucket name without gs://)}"
+: "${WEBHOOK_URL:?set WEBHOOK_URL or create $CONFIG_DIR/webhook-url (Discord webhook, or http://webhook-sink-svc/ with WEBHOOK_FORMAT=generic)}"
+WEBHOOK_FORMAT=${WEBHOOK_FORMAT:-discord}
 
 cd "$(dirname "$0")/.."
 
@@ -57,12 +84,23 @@ kubectl -n "$NAMESPACE" create secret generic postgres-secret \
   --from-literal=POSTGRES_USER=appuser \
   --from-literal=POSTGRES_PASSWORD="$POSTGRES_PASSWORD"
 
-echo "==> Registering the Argo CD application"
+echo "==> Creating project namespace, secrets and config"
+kubectl create namespace project
+kubectl -n project create secret generic postgres-secret \
+  --from-literal=POSTGRES_PASSWORD="$POSTGRES_PASSWORD"
+kubectl -n project create secret generic broadcaster-secret \
+  --from-literal=WEBHOOK_URL="$WEBHOOK_URL" \
+  --from-literal=WEBHOOK_FORMAT="$WEBHOOK_FORMAT"
+kubectl -n project create configmap backup-config \
+  --from-literal=BACKUP_BUCKET="$BACKUP_BUCKET"
+
+echo "==> Registering the Argo CD applications"
 kubectl apply -f argocd/log-output-app.yaml
+kubectl apply -f argocd/project-app.yaml
 
 cat <<MSG
 
-Done. Argo CD is syncing log_output/ from main.
+Done. Argo CD is syncing log_output/ and the_project/ from main.
   Watch:     kubectl -n argocd get applications
   UI:        kubectl -n argocd port-forward svc/argocd-server 8080:443   (https://localhost:8080, user: admin)
   Password:  kubectl -n argocd get secret argocd-initial-admin-secret -o jsonpath='{.data.password}' | base64 -d; echo

@@ -78,6 +78,23 @@ The URL is a credential, so keep it out of the repo.
 
 Watch the sink: `kubectl -n project logs -f deploy/webhook-sink`.
 
+## GitOps with Argo CD (exercise 4.8)
+The project is deployed by Argo CD, not by the workflow. `argocd/project-app.yaml` (applied once with `kubectl apply -f`)
+makes Argo CD track `the_project/` on `main` and sync it to the `project` namespace, with automated prune and self-heal.
+The workflow `.github/workflows/project.yaml` builds and pushes the images on every push; on `main` it also commits the new image tags
+to `kustomization.yaml` (`[skip ci]`), and Argo CD deploys that commit. Other branches only build images and are no longer deployed.
+
+The earlier Kustomize secret generators are gone, since Argo CD builds from git where the gitignored `.env` files do not exist.
+Create these in the `project` namespace by hand before the first sync (`scripts/create-cluster.sh` does it):
+```bash
+kubectl create namespace project
+kubectl -n project create secret generic postgres-secret --from-literal=POSTGRES_PASSWORD=...
+kubectl -n project create secret generic broadcaster-secret --from-literal=WEBHOOK_URL=... --from-literal=WEBHOOK_FORMAT=discord
+kubectl -n project create configmap backup-config --from-literal=BACKUP_BUCKET=<bucket name>
+```
+Changing a secret no longer restarts pods automatically; run `kubectl -n project rollout restart deploy/<name>`.
+The text above about CI writing env files and per-branch namespaces describes the earlier setup.
+
 ## Exercise 3.9: DBaaS vs DIY
 When deploying an app to Google Cloud, we have a choice between using a managed database service (DBaaS) or deploying our own database (DIY). The DIY option is cheaper and keeps the database under the team's control. DIY also offers a portability benefit, as the app setup is defined in its entirety by a collection of Kubernetes manifests and can be deployed to any Kubernetes cluster. However, DIY requires more work to set up and maintain, and the team must have the necessary expertise to do so. No automated backups are provided; the team must implement their own backup solution.
 

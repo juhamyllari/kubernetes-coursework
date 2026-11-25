@@ -19,46 +19,17 @@ resources:
   - manifests/backup-serviceaccount.yaml
   - manifests/backup-cronjob.yaml
 
-# Marks the Namespace as created by the branch pipeline; the cleanup workflow
-# only deletes namespaces carrying this label.
-patches:
-  - target:
-      kind: Namespace
-    patch: |-
-      - op: add
-        path: /metadata/labels
-        value:
-          deployed-by: branch-pipeline
-
-# The Postgres password is never committed. postgres-secret.env (gitignored)
-# must contain a line POSTGRES_PASSWORD=...; CI writes it from a GitHub secret.
-# The generated Secret name gets a content hash, so changing the password
-# rolls the pods that reference it.
-secretGenerator:
-  - name: postgres-secret
-    envs:
-      - postgres-secret.env
-  # broadcaster-secret.env (gitignored) holds WEBHOOK_URL and WEBHOOK_FORMAT
-  # (generic|discord). For the in-cluster sink:
-  #   WEBHOOK_URL=http://webhook-sink-svc/
-  #   WEBHOOK_FORMAT=generic
-  # CI writes it from the DISCORD_WEBHOOK_URL GitHub secret.
-  - name: broadcaster-secret
-    envs:
-      - broadcaster-secret.env
-
-# The backup bucket name is not committed either. backup-config.env (gitignored)
-# must contain a line BACKUP_BUCKET=<bucket name, without gs://>; CI writes it
-# from a GitHub secret.
-configMapGenerator:
-  - name: backup-config
-    envs:
-      - backup-config.env
+# Secrets and config are not in git. Argo CD deploys this directory straight from
+# main, so these are created by hand in the "project" namespace (see
+# scripts/create-cluster.sh and the_project/README.md) and Argo CD does not manage them:
+#   postgres-secret     POSTGRES_PASSWORD
+#   broadcaster-secret  WEBHOOK_URL, WEBHOOK_FORMAT (generic|discord)
+#   backup-config       BACKUP_BUCKET (bucket name, without gs://)
 
 # Image overrides. `name` is a placeholder that must match the image name used
 # in the manifests; the manifests carry no registry or version. newName/newTag
-# here are the local-build fallback (Docker Hub); CI rewrites them with
-# `kustomize edit set image`.
+# here are the initial values (Docker Hub); the CI workflow rewrites them with
+# `kustomize edit set image` and commits the result to main; Argo CD then deploys it.
 images:
   - name: todo-frontend
     newName: juhamyllari/todo-app
