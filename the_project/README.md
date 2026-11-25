@@ -169,19 +169,43 @@ App log in Google Cloud Logging showing the creation of a new todo:
 The manifests are split with Kustomize into `base/` (shared) and `overlays/staging` and `overlays/production`.
 Each overlay sets its own namespace (`staging`, `production`) and its own image tags; there are two Argo CD Applications
 (`argocd/project-staging-app.yaml`, `argocd/project-production-app.yaml`).
+(Since exercise 4.10 `base/`, `overlays/` and `monitoring/` live in the config repo, not here.)
 
 | | staging | production |
 |---|---|---|
 | Deployed when | every commit to `main` | a `v*` tag is pushed |
-| Argo CD tracks | `main`, `overlays/staging` | branch `production`, `overlays/production` |
+| Argo CD tracks | config repo `main`, `overlays/staging` | config repo `main`, `overlays/production` |
 | Broadcaster | only logs the messages (no `WEBHOOK_URL`) | forwards to the webhook |
 | Database backup | none | daily CronJob to Cloud Storage |
 
-On a push to `main`, the workflow builds the images and commits the new tags to `overlays/staging/kustomization.yaml`.
-On a `v*` tag, it builds the images tagged with the git tag and force-pushes the `production` branch, which is the tagged commit
-plus one commit that pins the production image tags. Production therefore runs exactly the tagged code, and a plain push to `main` never changes it.
-Release with `git tag v1.0.0 && git push origin v1.0.0`. The production Application reports an error until the first tag has created the branch.
+On a push to `main`, the workflow builds the images and commits the new tags to `overlays/staging/kustomization.yaml` in the config repo (see exercise 4.10).
+On a `v*` tag, it builds the images tagged with the git tag and commits those tags to `overlays/production/kustomization.yaml` there instead.
+A plain push to `main` never changes production's images. Release with `git tag v1.0.0 && git push origin v1.0.0`.
 
 Secrets are created by hand in each namespace (`scripts/create-cluster.sh` does it):
 staging needs only `postgres-secret`; production also needs `broadcaster-secret` and `backup-config`.
 Watch staging's broadcaster: `kubectl -n staging logs -f deploy/broadcaster-dep`.
+
+## Separate config repository (exercise 4.10)
+The code and the deployment configuration are in different repositories:
+
+| Repository | Contains |
+|---|---|
+| [kubernetes-coursework](https://github.com/juhamyllari/kubernetes-coursework) (this one) | application source, Dockerfiles, the CI workflow, the Argo CD Application manifests |
+| [kubernetes-coursework-config](https://github.com/juhamyllari/kubernetes-coursework-config) | Kustomize `base/` and `overlays/staging`, `overlays/production`, and the monitoring Helm values |
+
+Both Argo CD Applications track `main` of the config repo (paths `overlays/staging` and `overlays/production`).
+The CI workflow here builds and pushes the images, then checks out the config repo and commits the new image tags to it.
+Config commits do not trigger this repo's CI, so the `[skip ci]` marker and the self-triggering commit loop are gone.
+The workflow pushes with a write-enabled deploy key of the config repo, stored here as the secret `CONFIG_REPO_DEPLOY_KEY`
+(`GITHUB_TOKEN` only covers the repo the workflow runs in). Note that a change to the shared `base/` reaches production as soon
+as it is merged to the config repo; only the image tags are pinned until a release.
+
+Setting it up once:
+```bash
+ssh-keygen -t ed25519 -N "" -C "ci-config-push" -f config-deploy-key
+gh repo deploy-key add config-deploy-key.pub --repo juhamyllari/kubernetes-coursework-config --allow-write
+gh secret set CONFIG_REPO_DEPLOY_KEY --repo juhamyllari/kubernetes-coursework --env GKE_PROJECT < config-deploy-key
+rm config-deploy-key config-deploy-key.pub
+```
+(The secret is environment-scoped because the job runs in the `GKE_PROJECT` environment.)

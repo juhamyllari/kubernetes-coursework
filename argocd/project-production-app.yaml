@@ -1,6 +1,7 @@
 # Argo CD Application for the project, production environment. Applied once by hand
-# (kubectl apply -f). Only tagged releases (v*) are deployed, via the production branch that CI updates on a tag.
-# Secrets and ConfigMaps listed in the_project/overlays/production/kustomization.yaml
+# (kubectl apply -f). Tracks the separate config repo (kubernetes-coursework-config); CI
+# updates overlays/production there only when a v* tag is pushed to the source repo.
+# Secrets and ConfigMaps listed in overlays/production/kustomization.yaml of the config repo
 # must exist in the namespace beforehand (not in git).
 apiVersion: argoproj.io/v1alpha1
 kind: Application
@@ -10,9 +11,9 @@ metadata:
 spec:
   project: default
   source:
-    repoURL: https://github.com/juhamyllari/kubernetes-coursework.git
-    targetRevision: production
-    path: the_project/overlays/production
+    repoURL: https://github.com/juhamyllari/kubernetes-coursework-config.git
+    targetRevision: main
+    path: overlays/production
   destination:
     server: https://kubernetes.default.svc
     namespace: production

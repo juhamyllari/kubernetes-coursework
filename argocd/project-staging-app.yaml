@@ -1,6 +1,7 @@
 # Argo CD Application for the project, staging environment. Applied once by hand
-# (kubectl apply -f). Every commit to main is deployed.
-# Secrets and ConfigMaps listed in the_project/overlays/staging/kustomization.yaml
+# (kubectl apply -f). Tracks the separate config repo (kubernetes-coursework-config); CI there
+# updates overlays/staging on every push to main of the source repo.
+# Secrets and ConfigMaps listed in overlays/staging/kustomization.yaml of the config repo
 # must exist in the namespace beforehand (not in git).
 apiVersion: argoproj.io/v1alpha1
 kind: Application
@@ -10,9 +11,9 @@ metadata:
 spec:
   project: default
   source:
-    repoURL: https://github.com/juhamyllari/kubernetes-coursework.git
+    repoURL: https://github.com/juhamyllari/kubernetes-coursework-config.git
     targetRevision: main
-    path: the_project/overlays/staging
+    path: overlays/staging
   destination:
     server: https://kubernetes.default.svc
     namespace: staging
