@@ -1,21 +1,21 @@
-# Argo CD Application for the project (todo app). Applied once by hand
-# (kubectl apply -f); after that Argo CD tracks the_project/ on main.
-# The secrets postgres-secret and broadcaster-secret and the ConfigMap
-# backup-config must exist in the namespace beforehand (not in git).
+# Argo CD Application for the project, staging environment. Applied once by hand
+# (kubectl apply -f). Every commit to main is deployed.
+# Secrets and ConfigMaps listed in the_project/overlays/staging/kustomization.yaml
+# must exist in the namespace beforehand (not in git).
 apiVersion: argoproj.io/v1alpha1
 kind: Application
 metadata:
-  name: project
+  name: project-staging
   namespace: argocd
 spec:
   project: default
   source:
     repoURL: https://github.com/juhamyllari/kubernetes-coursework.git
     targetRevision: main
-    path: the_project
+    path: the_project/overlays/staging
   destination:
     server: https://kubernetes.default.svc
-    namespace: project
+    namespace: staging
   syncPolicy:
     automated:
       prune: true

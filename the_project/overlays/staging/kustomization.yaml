@@ -1,0 +1,32 @@
+# Staging: deployed by Argo CD from every commit to main (argocd/project-staging-app.yaml).
+# The CI workflow rewrites the images block on each push to main.
+#
+# Not in git, created by hand in the "staging" namespace:
+#   postgres-secret     POSTGRES_PASSWORD
+# There is no broadcaster-secret and no backup in staging.
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+namespace: staging
+resources:
+- ../../base
+
+# The broadcaster gets no WEBHOOK_URL, so it only logs the messages
+# and forwards nothing to an external service.
+patches:
+- target:
+    kind: Deployment
+    name: broadcaster-dep
+  patch: |-
+    - op: remove
+      path: /spec/template/spec/containers/0/envFrom
+
+images:
+- name: broadcaster
+  newName: europe-north1-docker.pkg.dev/dwk-gke-509508/dwk-repo/broadcaster
+  newTag: a80bd6ebf616b6572db8d9e7151986467333a0e1
+- name: todo-backend
+  newName: europe-north1-docker.pkg.dev/dwk-gke-509508/dwk-repo/backend
+  newTag: a80bd6ebf616b6572db8d9e7151986467333a0e1
+- name: todo-frontend
+  newName: europe-north1-docker.pkg.dev/dwk-gke-509508/dwk-repo/frontend
+  newTag: a80bd6ebf616b6572db8d9e7151986467333a0e1

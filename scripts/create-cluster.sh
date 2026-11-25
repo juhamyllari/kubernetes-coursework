@@ -84,23 +84,28 @@ kubectl -n "$NAMESPACE" create secret generic postgres-secret \
   --from-literal=POSTGRES_USER=appuser \
   --from-literal=POSTGRES_PASSWORD="$POSTGRES_PASSWORD"
 
-echo "==> Creating project namespace, secrets and config"
-kubectl create namespace project
-kubectl -n project create secret generic postgres-secret \
+echo "==> Creating staging and production namespaces, secrets and config"
+kubectl create namespace staging
+kubectl -n staging create secret generic postgres-secret \
   --from-literal=POSTGRES_PASSWORD="$POSTGRES_PASSWORD"
-kubectl -n project create secret generic broadcaster-secret \
+# Staging has no broadcaster-secret (the broadcaster only logs) and no backup.
+kubectl create namespace production
+kubectl -n production create secret generic postgres-secret \
+  --from-literal=POSTGRES_PASSWORD="$POSTGRES_PASSWORD"
+kubectl -n production create secret generic broadcaster-secret \
   --from-literal=WEBHOOK_URL="$WEBHOOK_URL" \
   --from-literal=WEBHOOK_FORMAT="$WEBHOOK_FORMAT"
-kubectl -n project create configmap backup-config \
+kubectl -n production create configmap backup-config \
   --from-literal=BACKUP_BUCKET="$BACKUP_BUCKET"
 
 echo "==> Registering the Argo CD applications"
 kubectl apply -f argocd/log-output-app.yaml
-kubectl apply -f argocd/project-app.yaml
+kubectl apply -f argocd/project-staging-app.yaml
+kubectl apply -f argocd/project-production-app.yaml
 
 cat <<MSG
 
-Done. Argo CD is syncing log_output/ and the_project/ from main.
+Done. Argo CD is syncing log_output/ and the_project/ (staging from main, production from the production branch).
   Watch:     kubectl -n argocd get applications
   UI:        kubectl -n argocd port-forward svc/argocd-server 8080:443   (https://localhost:8080, user: admin)
   Password:  kubectl -n argocd get secret argocd-initial-admin-secret -o jsonpath='{.data.password}' | base64 -d; echo

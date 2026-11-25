@@ -126,21 +126,21 @@ gcloud container clusters describe dwk-cluster --zone europe-north1-b --format='
 
 gcloud storage buckets create gs://$BUCKET --location=europe-north1 --uniform-bucket-level-access
 
-# Allow the db-backup ServiceAccount of the `project` namespace to write objects in the bucket only.
+# Allow the db-backup ServiceAccount of the `production` namespace to write objects in the bucket only.
 # objectCreator is not enough: `gcloud storage cp` also needs storage.objects.get to check the destination.
 gcloud storage buckets add-iam-policy-binding gs://$BUCKET \
   --role=roles/storage.objectUser \
-  --member="principal://iam.googleapis.com/projects/$PROJECT_NUMBER/locations/global/workloadIdentityPools/$PROJECT_ID.svc.id.goog/subject/ns/project/sa/db-backup"
+  --member="principal://iam.googleapis.com/projects/$PROJECT_NUMBER/locations/global/workloadIdentityPools/$PROJECT_ID.svc.id.goog/subject/ns/production/sa/db-backup"
 ```
-The IAM binding names a namespace, so only the `project` namespace (main branch) can upload. Backup jobs in branch namespaces fail with a permission error unless an equivalent binding is added for them.
+The IAM binding names a namespace, so only the `production` namespace can upload. Backup jobs in branch namespaces fail with a permission error unless an equivalent binding is added for them.
 The bucket name is not committed. Kustomize generates the `backup-config` ConfigMap from a gitignored `backup-config.env` file
 containing `BACKUP_BUCKET=<bucket name>` (no `gs://`). In CI the file is written from the `BACKUP_BUCKET` GitHub secret.
 For a local `kubectl apply -k .`, create the file yourself.
 
 Test it without waiting for the schedule:
 ```bash
-kubectl -n project create job --from=cronjob/db-backup db-backup-test
-kubectl -n project logs job/db-backup-test -c upload
+kubectl -n production create job --from=cronjob/db-backup db-backup-test
+kubectl -n production logs job/db-backup-test -c upload
 ```
 
 ### Cluster creation
@@ -164,3 +164,24 @@ The database contents do not survive; restore the latest dump with `pg_restore`.
 App log in Google Cloud Logging showing the creation of a new todo:
 
 ![GKE log of a todo creation](gke-log-screenshot.png)
+
+## Environments: staging and production (exercise 4.9)
+The manifests are split with Kustomize into `base/` (shared) and `overlays/staging` and `overlays/production`.
+Each overlay sets its own namespace (`staging`, `production`) and its own image tags; there are two Argo CD Applications
+(`argocd/project-staging-app.yaml`, `argocd/project-production-app.yaml`).
+
+| | staging | production |
+|---|---|---|
+| Deployed when | every commit to `main` | a `v*` tag is pushed |
+| Argo CD tracks | `main`, `overlays/staging` | branch `production`, `overlays/production` |
+| Broadcaster | only logs the messages (no `WEBHOOK_URL`) | forwards to the webhook |
+| Database backup | none | daily CronJob to Cloud Storage |
+
+On a push to `main`, the workflow builds the images and commits the new tags to `overlays/staging/kustomization.yaml`.
+On a `v*` tag, it builds the images tagged with the git tag and force-pushes the `production` branch, which is the tagged commit
+plus one commit that pins the production image tags. Production therefore runs exactly the tagged code, and a plain push to `main` never changes it.
+Release with `git tag v1.0.0 && git push origin v1.0.0`. The production Application reports an error until the first tag has created the branch.
+
+Secrets are created by hand in each namespace (`scripts/create-cluster.sh` does it):
+staging needs only `postgres-secret`; production also needs `broadcaster-secret` and `backup-config`.
+Watch staging's broadcaster: `kubectl -n staging logs -f deploy/broadcaster-dep`.

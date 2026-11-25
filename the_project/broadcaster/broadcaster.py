@@ -27,7 +27,8 @@ SUBJECT = os.environ.get("NATS_SUBJECT", "todos.events")
 # exactly one of them. This is what prevents duplicates when scaled.
 QUEUE = os.environ.get("NATS_QUEUE", "broadcaster")
 # The URL may be a credential (e.g. a Discord webhook): never log it.
-WEBHOOK_URL = os.environ["WEBHOOK_URL"]
+# If it is not set (staging), the messages are only logged, not forwarded.
+WEBHOOK_URL = os.environ.get("WEBHOOK_URL")
 # "generic": {"user", "message"}; "discord": {"username", "content"}.
 WEBHOOK_FORMAT = os.environ.get("WEBHOOK_FORMAT", "generic")
 
@@ -61,6 +62,9 @@ async def main():
         payload = build_payload(msg.data)
         if payload is None:
             logger.warning("Ignoring malformed event")
+            return
+        if WEBHOOK_URL is None:
+            logger.info("Not forwarded (no webhook configured)", message=payload.get("message") or payload["content"])
             return
         try:
             resp = await http.post(WEBHOOK_URL, json=payload)

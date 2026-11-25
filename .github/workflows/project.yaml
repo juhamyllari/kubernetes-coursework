@@ -4,6 +4,8 @@ on:
   push:
     branches:
       - '**'
+    tags:
+      - 'v*'
     paths:
       - 'the_project/**'
       - '.github/workflows/project.yaml'
@@ -19,7 +21,8 @@ env:
     REPOSITORY: dwk-repo
     BRANCH: ${{ github.ref_name }}
     APP_DIR: "the_project"
-    IMAGE_TAG: ${{ github.sha }}
+    # Commits are tagged with the sha, releases with the git tag (e.g. v1.2.0).
+    IMAGE_TAG: ${{ github.ref_type == 'tag' && github.ref_name || github.sha }}
   
 jobs:
   build-publish-deploy:
@@ -68,15 +71,17 @@ jobs:
           docker build --tag "$IMAGE_BASE/broadcaster:$IMAGE_TAG" "$APP_DIR/broadcaster"
           docker push "$IMAGE_BASE/broadcaster:$IMAGE_TAG"
 
-      # GitOps: CI only records the new image tags in git. Argo CD watches
-      # the_project/ on main and deploys the change to the cluster.
+      # GitOps: CI only records the new image tags in git; Argo CD deploys them.
+      #   main        -> overlays/staging on main (Argo CD app "project-staging")
+      #   v* tag      -> overlays/production on the "production" branch
+      #                  (Argo CD app "project-production")
       - name: Set up Kustomize
-        if: github.ref == 'refs/heads/main'
+        if: github.ref == 'refs/heads/main' || github.ref_type == 'tag'
         uses: imranismail/setup-kustomize@v3
 
-      - name: Commit new image tags
+      - name: Commit new image tags to staging
         if: github.ref == 'refs/heads/main'
-        working-directory: ${{ env.APP_DIR }}
+        working-directory: ${{ env.APP_DIR }}/overlays/staging
         run: |-
           kustomize edit set image todo-backend="$IMAGE_BASE/backend:$IMAGE_TAG"
           kustomize edit set image todo-frontend="$IMAGE_BASE/frontend:$IMAGE_TAG"
@@ -84,6 +89,23 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add kustomization.yaml
-          git commit -m "Deploy project $IMAGE_TAG [skip ci]"
+          git commit -m "Deploy staging $IMAGE_TAG [skip ci]"
           git pull --rebase origin main
           git push origin HEAD:main
+
+      # The production branch is the tagged commit plus one commit pinning the
+      # production images, so production runs exactly what the tag contains.
+      # It is force-pushed: it is a deployment pointer, not a development branch.
+      - name: Deploy tag to production
+        if: github.ref_type == 'tag'
+        working-directory: ${{ env.APP_DIR }}/overlays/production
+        run: |-
+          kustomize edit set image todo-backend="$IMAGE_BASE/backend:$IMAGE_TAG"
+          kustomize edit set image todo-frontend="$IMAGE_BASE/frontend:$IMAGE_TAG"
+          kustomize edit set image broadcaster="$IMAGE_BASE/broadcaster:$IMAGE_TAG"
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git checkout -B production
+          git add kustomization.yaml
+          git commit -m "Deploy production $IMAGE_TAG [skip ci]"
+          git push --force origin production
