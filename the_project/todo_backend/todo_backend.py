@@ -81,6 +81,11 @@ async def publish_event(event: str, todo_id: int):
 async def lifespan(app: FastAPI):
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
+        # create_all does not alter existing tables; bring databases created
+        # by older versions of the app up to date.
+        await conn.execute(text(
+            "ALTER TABLE todos ADD COLUMN IF NOT EXISTS done BOOLEAN NOT NULL DEFAULT false"
+        ))
     yield
     if nats_client is not None and not nats_client.is_closed:
         await nats_client.drain()
