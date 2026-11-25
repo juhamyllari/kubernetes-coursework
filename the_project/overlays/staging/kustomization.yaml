@@ -23,10 +23,10 @@ patches:
 images:
 - name: broadcaster
   newName: europe-north1-docker.pkg.dev/dwk-gke-509508/dwk-repo/broadcaster
-  newTag: 181b4444a141f3e2c9a6d26bb095526ce54e3d3b
+  newTag: 3fa20bbd553ca72446239f8da44cd0e01833075e
 - name: todo-backend
   newName: europe-north1-docker.pkg.dev/dwk-gke-509508/dwk-repo/backend
-  newTag: 181b4444a141f3e2c9a6d26bb095526ce54e3d3b
+  newTag: 3fa20bbd553ca72446239f8da44cd0e01833075e
 - name: todo-frontend
   newName: europe-north1-docker.pkg.dev/dwk-gke-509508/dwk-repo/frontend
-  newTag: 181b4444a141f3e2c9a6d26bb095526ce54e3d3b
+  newTag: 3fa20bbd553ca72446239f8da44cd0e01833075e
