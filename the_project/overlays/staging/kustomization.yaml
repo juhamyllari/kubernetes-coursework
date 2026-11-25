@@ -13,20 +13,20 @@ resources:
 # The broadcaster gets no WEBHOOK_URL, so it only logs the messages
 # and forwards nothing to an external service.
 patches:
-- target:
-    kind: Deployment
-    name: broadcaster-dep
-  patch: |-
+- patch: |-
     - op: remove
       path: /spec/template/spec/containers/0/envFrom
+  target:
+    kind: Deployment
+    name: broadcaster-dep
 
 images:
 - name: broadcaster
   newName: europe-north1-docker.pkg.dev/dwk-gke-509508/dwk-repo/broadcaster
-  newTag: a80bd6ebf616b6572db8d9e7151986467333a0e1
+  newTag: 181b4444a141f3e2c9a6d26bb095526ce54e3d3b
 - name: todo-backend
   newName: europe-north1-docker.pkg.dev/dwk-gke-509508/dwk-repo/backend
-  newTag: a80bd6ebf616b6572db8d9e7151986467333a0e1
+  newTag: 181b4444a141f3e2c9a6d26bb095526ce54e3d3b
 - name: todo-frontend
   newName: europe-north1-docker.pkg.dev/dwk-gke-509508/dwk-repo/frontend
-  newTag: a80bd6ebf616b6572db8d9e7151986467333a0e1
+  newTag: 181b4444a141f3e2c9a6d26bb095526ce54e3d3b
