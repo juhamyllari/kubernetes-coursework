@@ -10,6 +10,10 @@ import nats
 import structlog
 
 logging.basicConfig(level=logging.INFO, stream=sys.stdout, format="%(message)s")
+# httpx logs every request line at INFO, including the full URL. The webhook URL
+# is a credential, so keep these libraries to warnings and above.
+for name in ("httpx", "httpcore"):
+    logging.getLogger(name).setLevel(logging.WARNING)
 structlog.configure(
     processors=[
         structlog.stdlib.add_log_level,
